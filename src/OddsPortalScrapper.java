@@ -1,50 +1,55 @@
-import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
-import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.support.ui.ExpectedCondition;
+import org.openqa.selenium.support.ui.WebDriverWait;
 
-public class OddsPortalScrapper {
+public class OddsPortalScrapper implements AutoCloseable {
 	
-	public enum SectionParser {
-		LIVE_TENIS(
-			"https://www.oddsportal.com/inplay-odds/live-now/tennis/",
-			"#live-match-data td.name.table-participant"
-				);
+	private static final String ENTRY_URL = "https://www.oddsportal.com/events/";
+	
+	private static final int WEB_LOAD_TIMEOUT_SEC = 60;
+	private static final Function<? super WebDriver, Boolean> jsReadyCondition =
+			(ExpectedCondition<Boolean>) wd -> ((JavascriptExecutor) wd).executeScript("return document.readyState").equals("complete");
+			
+	private WebDriver driver;
+	
+	public OddsPortalScrapper() {
+		driver = new ChromeDriver();
+		driver.manage().timeouts().pageLoadTimeout(WEB_LOAD_TIMEOUT_SEC, TimeUnit.SECONDS);
+	}
+	
+	private void load(String url) {
+		System.out.println("Loading " + url + "...");
 		
-		public final String baseUrl;
-		public final String matchesSelector;
+		long startTime = System.currentTimeMillis();
+		driver.get(url);
+		new WebDriverWait(driver, WEB_LOAD_TIMEOUT_SEC).until(jsReadyCondition);
+		long estimatedTime = System.currentTimeMillis() - startTime;
 		
-		SectionParser(String baseUrl, String matchesSelector) {
-			this.baseUrl = baseUrl;
-			this.matchesSelector = matchesSelector;
+		System.out.println("Loaded in " + estimatedTime + " ms");
+	}
+	
+	public void run() throws Exception {
+		try {
+			load(ENTRY_URL);
+		} finally {
+			System.in.read();
 		}
+	}
+	
+	@Override
+	public void close() throws Exception {
+		driver.close();
 	}
 	
 	public static void main(String[] args) throws Exception {
 		System.setProperty("webdriver.chrome.driver", "C:\\chromedriver.exe");
-		WebDriver driver = new ChromeDriver();
-		
-		try {
-			System.out.println("Loading...");
-			driver.get(SectionParser.LIVE_TENIS.baseUrl);
-			sleep(5);
-		
-			System.out.println("Matches:");
-			List<WebElement> matches = driver.findElements(By.cssSelector(SectionParser.LIVE_TENIS.matchesSelector));
-			for (WebElement match : matches) {
-				System.out.println("\t" + match.findElement(By.tagName("a")).getText());
-			}
-		} finally {
-			System.in.read();
-			driver.close();
+		try (OddsPortalScrapper scrapper = new OddsPortalScrapper()) {
+			scrapper.run();
 		}
-	}
-	
-	private static void sleep(double seconds) {
-		try {
-			Thread.sleep((long) (seconds * 1000));
-		} catch (InterruptedException e) {}
 	}
 }
