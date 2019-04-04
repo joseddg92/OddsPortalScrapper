@@ -125,6 +125,9 @@ public class OddsPortalScrapper implements AutoCloseable {
 					String leagueName = linkElement.getText();
 					String relativeUrl = linkElement.getAttribute("href");
 					
+					if (leagueName.trim().isEmpty())
+						continue;
+					
 					if (relativeUrl.trim().isEmpty()) {
 						logError(new ScrapException("League with empty link", tdElement));
 						continue;
