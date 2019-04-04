@@ -1,4 +1,3 @@
-import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -6,19 +5,22 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.openqa.selenium.By;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.Point;
 import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.support.ui.ExpectedCondition;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 public class OddsPortalScrapper implements AutoCloseable {
 	
-	private static final String ENTRY_URL = "https://www.oddsportal.com/events/";
+	private static final String BASE_URL = "https://www.oddsportal.com";
+	private static final String ENTRY_URL = BASE_URL + "/events/";
 	private static final String SPORT_URL_FORMAT = "https://www.oddsportal.com/events/#sport/%s/all";
 	
 	private static final int DEFAULT_WEBLOAD_TIMEOUT_SEC = 60;
@@ -31,7 +33,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 	
 	public OddsPortalScrapper() {
 		driver = new ChromeDriver();
-		driver.manage().window().setPosition(new Point(1600, 0));
+	//	driver.manage().window().setPosition(new Point(1600, 0));
 		driver.manage().window().maximize();
 		driver.manage().timeouts().pageLoadTimeout(DEFAULT_WEBLOAD_TIMEOUT_SEC, TimeUnit.SECONDS);
 	}
@@ -43,11 +45,11 @@ public class OddsPortalScrapper implements AutoCloseable {
 		errors.add(e);
 	}
 	
-	private void loadAndWait(String url) {
-		loadAndWait(url, DEFAULT_WEBLOAD_TIMEOUT_SEC);
+	private Document loadAndWait(String url) {
+		return loadAndWait(url, DEFAULT_WEBLOAD_TIMEOUT_SEC);
 	}
 	
-	private void loadAndWait(String url, int timeout) {
+	private Document loadAndWait(String url, int timeout) {
 		System.out.println("Loading " + url + "...");
 		
 		long startTime = System.currentTimeMillis();
@@ -55,17 +57,19 @@ public class OddsPortalScrapper implements AutoCloseable {
 		new WebDriverWait(driver, DEFAULT_WEBLOAD_TIMEOUT_SEC).until(jsReadyCondition);
 		long estimatedTime = System.currentTimeMillis() - startTime;
 		
+		Document doc = Jsoup.parse(driver.getPageSource(), driver.getCurrentUrl());
+		
 		System.out.println("Loaded in " + estimatedTime + " ms");
-
+		return doc;
 	}
 	
 	private List<String> getSports() throws ScrapException {
-		loadAndWait(ENTRY_URL);
-		List<WebElement> tabs = driver.findElements(By.cssSelector("div#tabdiv_sport_main li.tab"));
+		Document startPage = loadAndWait(ENTRY_URL);
+		Elements tabs = startPage.select("div#tabdiv_sport_main li.tab");
 		List<String> sports = new ArrayList<>(tabs.size());
 		
-		for (WebElement tab : tabs) {	
-			String onClickAttr = tab.findElement(By.cssSelector("a")).getAttribute("onclick");
+		for (Element tab : tabs) {	
+			String onClickAttr = tab.selectFirst("a").attr("onclick");
 			Matcher m = sportsOnClickToURL_regex.matcher(onClickAttr);
 			if (m.find()) {
 				String sport = m.group(1);
@@ -85,27 +89,26 @@ public class OddsPortalScrapper implements AutoCloseable {
 		System.out.println("Parsing sport=" + sportName + " ...");
 		
 		loadAndWait("http://www.google.es");
-		loadAndWait(String.format(SPORT_URL_FORMAT, sportName));
+		Document doc = loadAndWait(String.format(SPORT_URL_FORMAT, sportName));
 		
-		List<WebElement> rows = driver.findElements(By.cssSelector("tbody tr"));
+		Elements rows = doc.select("tbody tr");
 		if (rows.isEmpty()) {
 			logError(new ScrapException("Sport " + sportName +  " contained no rows"));
 			return leagues;
 		}
 		
 		String countryName = "";
-		for (WebElement row : rows) {
-			if (row.getAttribute("class").contains("center") && !row.getAttribute("class").contains("dark")) {
+		for (Element row : rows) {
+			if (row.attr("class").contains("center") && !row.attr("class").contains("dark")) {
 				
 				/* Skip 'popular' category */
-				String xcid = row.getAttribute("xcid");
+				String xcid = row.attr("xcid");
 				if (xcid != null && xcid.contains("popular"))
 					continue;
 				try {
-					countryName = row.findElement(By.cssSelector("a.bfl")).getText();
+					countryName = row.select("a.bfl").text();
 				} catch (NoSuchElementException e) {
 					logError(new ScrapException("Center-row did not contain a 'bfl' child to get name", row));
-					System.out.println(row.getAttribute("innerHTML"));
 				}
 			}
 			
@@ -113,33 +116,29 @@ public class OddsPortalScrapper implements AutoCloseable {
 			if (countryName.isEmpty())
 				continue;
 			
-			List<WebElement> tdElements = row.findElements(By.cssSelector("td"));
+			Elements tdElements = row.select("td");
 			final Country country = new Country(countryName);
-			for (WebElement tdElement : tdElements) {
+			for (Element tdElement : tdElements) {
+				Element linkElement = tdElement.selectFirst("a");
 				/* Skip empty elements */
-				if (tdElement.getText().trim().isEmpty() && tdElement.findElements(By.xpath(".//*")).isEmpty())
+				if (linkElement == null)
 					continue;
-
-				try {
-					WebElement linkElement = tdElement.findElement(By.cssSelector("a"));
-					String leagueName = linkElement.getText();
-					String relativeUrl = linkElement.getAttribute("href");
-					
-					if (leagueName.trim().isEmpty())
-						continue;
-					
-					if (relativeUrl.trim().isEmpty()) {
-						logError(new ScrapException("League with empty link", tdElement));
-						continue;
-					}
-					
-					League l = new League(sport, country, leagueName, relativeUrl);
-					System.out.println(l);
-		
-					leagues.add(l);
-				} catch (NoSuchElementException e) {
-					logError(new ScrapException("Found strange league element (row-subelement) which couldn't be parsed", tdElement));
+				
+				String leagueName = linkElement.text();
+				String relativeUrl = linkElement.attr("href");
+				
+				if (leagueName.trim().isEmpty())
+					continue;
+				
+				if (relativeUrl.trim().isEmpty()) {
+					logError(new ScrapException("League with empty link", tdElement));
+					continue;
 				}
+				
+				League l = new League(sport, country, leagueName, relativeUrl);
+				System.out.println(l);
+	
+				leagues.add(l);
 			}
 		}
 		
@@ -151,8 +150,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 	
 	private List<?> parseLeague(League league) {
 		List<League> leagues = new ArrayList<>();
-
-		loadAndWait(league.url);
+		Document doc = loadAndWait(BASE_URL + league.relUrl);
 		
 		return leagues;
 	}
