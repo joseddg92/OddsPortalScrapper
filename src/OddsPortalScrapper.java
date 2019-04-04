@@ -1,3 +1,4 @@
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -38,8 +39,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 	private void logError(ScrapException e) {
 		StackTraceElement errorLine = e.getStackTrace()[0];
 		
-		System.err.println(errorLine.getMethodName() + errorLine.getLineNumber() + ":  " + e.getMessage());
-		
+		System.err.println("Non-critical error: " + errorLine.getMethodName() + ":" +  errorLine.getLineNumber() + "- >  " + e.getMessage());
 		errors.add(e);
 	}
 	
@@ -60,6 +60,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 	}
 	
 	private List<String> getSports() throws ScrapException {
+		loadAndWait(ENTRY_URL);
 		List<WebElement> tabs = driver.findElements(By.cssSelector("div#tabdiv_sport_main li.tab"));
 		List<String> sports = new ArrayList<>(tabs.size());
 		
@@ -77,19 +78,22 @@ public class OddsPortalScrapper implements AutoCloseable {
 		return sports;
 	}
 	
-	private void parseSport(String sport) {
+	private List<League> parseSport(String sportName) {
+		final Sport sport = new Sport(sportName);
+		List<League> leagues = new ArrayList<>();
 		long startTime = System.currentTimeMillis();
-		System.out.println("Parsing sport=" + sport + " ...");
+		System.out.println("Parsing sport=" + sportName + " ...");
 		
-		loadAndWait(String.format(SPORT_URL_FORMAT, sport));
+		loadAndWait("http://www.google.es");
+		loadAndWait(String.format(SPORT_URL_FORMAT, sportName));
 		
 		List<WebElement> rows = driver.findElements(By.cssSelector("tbody tr"));
 		if (rows.isEmpty()) {
-			logError(new ScrapException("Sport " + sport +  " contained no rows"));
-			return;
+			logError(new ScrapException("Sport " + sportName +  " contained no rows"));
+			return leagues;
 		}
 		
-		String country = "";
+		String countryName = "";
 		for (WebElement row : rows) {
 			if (row.getAttribute("class").contains("center") && !row.getAttribute("class").contains("dark")) {
 				
@@ -98,7 +102,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 				if (xcid != null && xcid.contains("popular"))
 					continue;
 				try {
-					country = row.findElement(By.cssSelector("a.bfl")).getText();
+					countryName = row.findElement(By.cssSelector("a.bfl")).getText();
 				} catch (NoSuchElementException e) {
 					logError(new ScrapException("Center-row did not contain a 'bfl' child to get name", row));
 					System.out.println(row.getAttribute("innerHTML"));
@@ -106,38 +110,57 @@ public class OddsPortalScrapper implements AutoCloseable {
 			}
 			
 			/* Skip orphan subcategories (which should only be "popular" subcategories) */
-			if (country.isEmpty())
+			if (countryName.isEmpty())
 				continue;
 			
 			List<WebElement> tdElements = row.findElements(By.cssSelector("td"));
+			final Country country = new Country(countryName);
 			for (WebElement tdElement : tdElements) {
 				/* Skip empty elements */
 				if (tdElement.getText().trim().isEmpty() && tdElement.findElements(By.xpath(".//*")).isEmpty())
 					continue;
 
 				try {
-					String subCategoryName = tdElement.findElement(By.cssSelector("a")).getText();
-					System.out.println(sport + " -> " + country + " -> " + subCategoryName);
+					WebElement linkElement = tdElement.findElement(By.cssSelector("a"));
+					String leagueName = linkElement.getText();
+					String relativeUrl = linkElement.getAttribute("href");
+					
+					if (relativeUrl.trim().isEmpty()) {
+						logError(new ScrapException("League with empty link", tdElement));
+						continue;
+					}
+					
+					League l = new League(sport, country, leagueName, relativeUrl);
+					System.out.println(l);
+		
+					leagues.add(l);
 				} catch (NoSuchElementException e) {
-					e.printStackTrace();
-					System.out.println(tdElement.getAttribute("innerHTML"));
+					logError(new ScrapException("Found strange league element (row-subelement) which couldn't be parsed", tdElement));
 				}
-				
 			}
 		}
 		
 		long estimatedTime = System.currentTimeMillis() - startTime;
-		System.out.println("Sport " + sport + " parsed in " + estimatedTime / 1000.0 + " secs");
+		System.out.println("Sport " + sportName + " parsed (" + leagues.size() + " leagues found) in " + estimatedTime / 1000.0 + " secs");
+		
+		return leagues;
+	}
+	
+	private List<?> parseLeague(League league) {
+		List<League> leagues = new ArrayList<>();
+
+		loadAndWait(league.url);
+		
+		return leagues;
 	}
 	
 	public void run() throws Exception {
-		loadAndWait(ENTRY_URL);
-		List<String> sports = getSports();
-		
-		for (String sport : sports) {
-			loadAndWait("http://www.google.es");
-			parseSport(sport);
+		for (String sport : getSports()) {
+			for (League league : parseSport(sport)) {
+				parseLeague(league);
+			}
 		}
+		
 	}
 	
 	@Override
