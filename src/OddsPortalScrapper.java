@@ -158,12 +158,16 @@ public class OddsPortalScrapper implements AutoCloseable {
 	}
 	
 	public void run() throws Exception {
+		long startTime = System.currentTimeMillis();
+		
 		for (String sport : getSports()) {
 			for (League league : parseSport(sport)) {
 				parseLeague(league);
 			}
 		}
 		
+		long elapsedTime = System.currentTimeMillis() - startTime;
+		System.out.println("Complete execution took " + elapsedTime / 1000 + " seconds.");
 	}
 	
 	@Override
