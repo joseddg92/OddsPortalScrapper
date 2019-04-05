@@ -1,4 +1,7 @@
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -33,7 +36,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 	
 	public OddsPortalScrapper() {
 		driver = new ChromeDriver();
-	//	driver.manage().window().setPosition(new Point(1600, 0));
+		driver.manage().window().setPosition(new Point(1600, 0));
 		driver.manage().window().maximize();
 		driver.manage().timeouts().pageLoadTimeout(DEFAULT_WEBLOAD_TIMEOUT_SEC, TimeUnit.SECONDS);
 	}
@@ -148,24 +151,75 @@ public class OddsPortalScrapper implements AutoCloseable {
 		return leagues;
 	}
 	
-	private List<?> parseLeague(League league) {
-		List<League> leagues = new ArrayList<>();
+	private List<Match> parseLeague(League league) {
+		List<Match> matches = new ArrayList<>();
+		
+		long startTime = System.currentTimeMillis();
+		System.out.println("Parsing league=" + league + " ...");
+		
 		Document doc = loadAndWait(BASE_URL + league.relUrl);
 		
-		return leagues;
+		Elements rows = doc.select("tbody tr");
+		if (rows.isEmpty()) {
+			logError(new ScrapException("League " + league +  " contained no rows"));
+			return matches;
+		}
+		
+		final Collection<String> rowsClassesToSkip = Arrays.asList("center", "table-dummyrow");
+		for (Element row : rows) {
+			List<String> rowClasses = Arrays.asList(row.attr("class").split(" "));
+			if (!Collections.disjoint(rowsClassesToSkip, rowClasses))
+				continue;
+		
+			Element matchElement = null;
+			Elements possibleMatchElement = row.select("td.name a");
+			for (Element e : possibleMatchElement) {
+				if (e.id().isEmpty()) {
+					matchElement = e;
+					break;
+				}
+			}
+			if (matchElement == null)
+				continue;
+			
+			String matchName = matchElement.text();
+			String matchUrl = matchElement.attr("href");
+			Match match = new Match(league, matchName, matchUrl);
+			matches.add(match);
+
+			System.out.println("Adding match: " + match);
+		}
+		
+		long estimatedTime = System.currentTimeMillis() - startTime;
+		System.out.println("League: " + league + " parsed (" + matches.size() + " matches found) in " + estimatedTime / 1000.0 + " secs");
+		
+		
+		return matches;
 	}
 	
+	
 	public void run() throws Exception {
+		List<Match> matches = new ArrayList<>();
 		long startTime = System.currentTimeMillis();
 		
-		for (String sport : getSports()) {
-			for (League league : parseSport(sport)) {
-				parseLeague(league);
+		List<String> sports = getSports();
+		
+		long totalQueries = 0;
+		for (String sport : sports)
+			totalQueries += parseSport(sport).size();
+		
+		long currentQuery = 0;
+		for (String sport : sports) {
+			List<League> leagues = parseSport(sport);
+			for (League league : leagues) {
+				matches.addAll(parseLeague(league));
+				System.err.println(String.format("Progress: %d/%d ", currentQuery, totalQueries) + " (" + (double) ++currentQuery / ((double) currentQuery) + "%)");
 			}
 		}
 		
-		long elapsedTime = System.currentTimeMillis() - startTime;
-		System.out.println("Complete execution took " + elapsedTime / 1000 + " seconds.");
+		long elapsedTimeSecs = (System.currentTimeMillis() - startTime) / 1000;
+		double matchesParsedPerSecond = matches.size() / (double) elapsedTimeSecs;
+		System.out.println(matches.size() + " matches found in " + matchesParsedPerSecond + " seconds (" + matchesParsedPerSecond + " matches/s)");
 	}
 	
 	@Override
@@ -183,7 +237,10 @@ public class OddsPortalScrapper implements AutoCloseable {
 		System.setProperty("webdriver.chrome.driver", "C:\\chromedriver.exe");
 		try (OddsPortalScrapper scrapper = new OddsPortalScrapper()) {
 			
-			/* Introduce another try block so that scrapper is not closed before the catch or finally blocks */
+			/*
+			 *  Introduce another try block so that scrapper 
+			 * is not closed before the catch or finally blocks
+			 */
 			try {
 				scrapper.run();
 				
@@ -197,13 +254,13 @@ public class OddsPortalScrapper implements AutoCloseable {
 				e.printStackTrace();
 				
 				pauseOnExit = true;
-			}
-			
-			if (pauseOnExit) {
-				System.err.flush();
-	
-				System.out.println("Press any key to close.");
-				System.in.read();
+			} finally {
+				if (pauseOnExit) {
+					System.err.flush();
+		
+					System.out.println("Press any key to close.");
+					System.in.read();
+				}
 			}
 		}
 	}
