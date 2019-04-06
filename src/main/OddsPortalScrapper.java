@@ -4,23 +4,15 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.NoSuchElementException;
-import org.openqa.selenium.Point;
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.support.ui.ExpectedCondition;
-import org.openqa.selenium.support.ui.WebDriverWait;
 
+import htmlProvider.SeleniumChromeProvider;
 import model.Country;
 import model.League;
 import model.Match;
@@ -33,20 +25,10 @@ public class OddsPortalScrapper implements AutoCloseable {
 	private static final String ENTRY_URL = BASE_URL + "/events/";
 	private static final String SPORT_URL_FORMAT = "https://www.oddsportal.com/events/#sport/%s/all";
 	
-	private static final int DEFAULT_WEBLOAD_TIMEOUT_SEC = 60;
-	private static final Function<? super WebDriver, Boolean> jsReadyCondition =
-			(ExpectedCondition<Boolean>) wd -> ((JavascriptExecutor) wd).executeScript("return document.readyState").equals("complete");
 	private static final Pattern sportsOnClickToURL_regex = Pattern.compile("tab_sport_main.select\\( '(.*)'\\);this.blur\\(\\);return false;");	
 			
-	private WebDriver driver;
+	private SeleniumChromeProvider htmlProvider = new SeleniumChromeProvider();
 	private List<ScrapException> errors = new ArrayList<>();
-	
-	public OddsPortalScrapper() {
-		driver = new ChromeDriver();
-		driver.manage().window().setPosition(new Point(1600, 0));
-		driver.manage().window().maximize();
-		driver.manage().timeouts().pageLoadTimeout(DEFAULT_WEBLOAD_TIMEOUT_SEC, TimeUnit.SECONDS);
-	}
 	
 	private void logError(ScrapException e) {
 		StackTraceElement errorLine = e.getStackTrace()[0];
@@ -55,26 +37,8 @@ public class OddsPortalScrapper implements AutoCloseable {
 		errors.add(e);
 	}
 	
-	private Document loadAndWait(String url) {
-		return loadAndWait(url, DEFAULT_WEBLOAD_TIMEOUT_SEC);
-	}
-	
-	private Document loadAndWait(String url, int timeout) {
-		System.out.println("Loading " + url + "...");
-		
-		long startTime = System.currentTimeMillis();
-		driver.get(url);
-		new WebDriverWait(driver, DEFAULT_WEBLOAD_TIMEOUT_SEC).until(jsReadyCondition);
-		long estimatedTime = System.currentTimeMillis() - startTime;
-		
-		Document doc = Jsoup.parse(driver.getPageSource(), driver.getCurrentUrl());
-		
-		System.out.println("Loaded in " + estimatedTime + " ms");
-		return doc;
-	}
-	
 	private List<String> getSports() throws ScrapException {
-		Document startPage = loadAndWait(ENTRY_URL);
+		Document startPage = htmlProvider.get(ENTRY_URL);
 		Elements tabs = startPage.select("div#tabdiv_sport_main li.tab");
 		List<String> sports = new ArrayList<>(tabs.size());
 		
@@ -98,8 +62,8 @@ public class OddsPortalScrapper implements AutoCloseable {
 		long startTime = System.currentTimeMillis();
 		System.out.println("Parsing sport=" + sportName + " ...");
 		
-		loadAndWait("http://www.google.es");
-		Document doc = loadAndWait(String.format(SPORT_URL_FORMAT, sportName));
+		htmlProvider.get("http://www.google.es");
+		Document doc = htmlProvider.get(String.format(SPORT_URL_FORMAT, sportName));
 		
 		Elements rows = doc.select("tbody tr");
 		if (rows.isEmpty()) {
@@ -163,7 +127,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 		long startTime = System.currentTimeMillis();
 		System.out.println("Parsing league=" + league + " ...");
 		
-		Document doc = loadAndWait(BASE_URL + league.relUrl);
+		Document doc = htmlProvider.get(BASE_URL + league.relUrl);
 		
 		Elements rows = doc.select("tbody tr");
 		if (rows.isEmpty()) {
@@ -229,10 +193,10 @@ public class OddsPortalScrapper implements AutoCloseable {
 	
 	@Override
 	public void close() throws Exception {
-		driver.close();
+		htmlProvider.close();
 	}
 	
 	public List<ScrapException> getErrors() {
-		return errors;
+		return Collections.unmodifiableList(errors);
 	}
 }
