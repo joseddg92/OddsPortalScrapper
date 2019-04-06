@@ -1,4 +1,4 @@
-
+package model;
 public class League {
 	
 	public final Sport sport;

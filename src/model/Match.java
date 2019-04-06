@@ -1,4 +1,4 @@
-
+package model;
 public class Match {
 
 	public final League league;

@@ -1,3 +1,4 @@
+package model;
 
 public class Country {
 	public final String name;

@@ -1,3 +1,4 @@
+package main;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -19,6 +20,12 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.support.ui.ExpectedCondition;
 import org.openqa.selenium.support.ui.WebDriverWait;
+
+import model.Country;
+import model.League;
+import model.Match;
+import model.ScrapException;
+import model.Sport;
 
 public class OddsPortalScrapper implements AutoCloseable {
 	
@@ -153,7 +160,6 @@ public class OddsPortalScrapper implements AutoCloseable {
 	
 	private List<Match> parseLeague(League league) {
 		List<Match> matches = new ArrayList<>();
-		
 		long startTime = System.currentTimeMillis();
 		System.out.println("Parsing league=" + league + " ...");
 		
@@ -196,8 +202,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 		
 		return matches;
 	}
-	
-	
+
 	public void run() throws Exception {
 		List<Match> matches = new ArrayList<>();
 		long startTime = System.currentTimeMillis();
@@ -229,39 +234,5 @@ public class OddsPortalScrapper implements AutoCloseable {
 	
 	public List<ScrapException> getErrors() {
 		return errors;
-	}
-	
-	public static void main(String[] args) throws Exception {
-		boolean pauseOnExit = false;
-
-		System.setProperty("webdriver.chrome.driver", "C:\\chromedriver.exe");
-		try (OddsPortalScrapper scrapper = new OddsPortalScrapper()) {
-			
-			/*
-			 *  Introduce another try block so that scrapper 
-			 * is not closed before the catch or finally blocks
-			 */
-			try {
-				scrapper.run();
-				
-				List<ScrapException> errors = scrapper.getErrors();
-				if (!errors.isEmpty()) {
-					System.err.println(errors.size() + " non-critical errors");
-					pauseOnExit = true;
-				}
-			} catch (Exception e) {
-				System.err.println("Critical exception: ");
-				e.printStackTrace();
-				
-				pauseOnExit = true;
-			} finally {
-				if (pauseOnExit) {
-					System.err.flush();
-		
-					System.out.println("Press any key to close.");
-					System.in.read();
-				}
-			}
-		}
 	}
 }

@@ -1,3 +1,4 @@
+package model;
 import org.jsoup.nodes.Element;
 
 public class ScrapException extends Exception {
