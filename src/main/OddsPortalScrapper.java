@@ -33,7 +33,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 	private void logError(ScrapException e) {
 		StackTraceElement errorLine = e.getStackTrace()[0];
 		
-		System.err.println("Non-critical error: " + errorLine.getMethodName() + ":" +  errorLine.getLineNumber() + "- >  " + e.getMessage());
+		System.err.println("Non-critical error: (" + errorLine.getMethodName() + ":" +  errorLine.getLineNumber() + ")>  " + e.getMessage());
 		errors.add(e);
 	}
 	
@@ -59,12 +59,11 @@ public class OddsPortalScrapper implements AutoCloseable {
 	private List<League> parseSport(Sport sport) {
 		List<League> leagues = new ArrayList<>();
 		long startTime = System.currentTimeMillis();
-		System.out.println("Parsing sport=" + sport + " ...");
 		
 		htmlProvider.get("http://www.google.es");
-		Document doc = htmlProvider.get(String.format(SPORT_URL_FORMAT, sport));
+		Document doc = htmlProvider.get(String.format(SPORT_URL_FORMAT, sport.name));
 		
-		Elements rows = doc.select("tbody tr");
+		Elements rows = doc.select("table[style] tbody > tr");
 		if (rows.isEmpty()) {
 			logError(new ScrapException("Sport " + sport +  " contained no rows"));
 			return leagues;
@@ -109,26 +108,20 @@ public class OddsPortalScrapper implements AutoCloseable {
 				}
 				
 				League l = new League(sport, country, leagueName, relativeUrl);
-				System.out.println(l);
-	
 				leagues.add(l);
 			}
 		}
 		
 		long estimatedTime = System.currentTimeMillis() - startTime;
-		System.out.println("Sport " + sport + " parsed (" + leagues.size() + " leagues found) in " + estimatedTime / 1000.0 + " secs");
-		
+
 		return leagues;
 	}
 	
 	private List<Match> parseLeague(League league) {
 		List<Match> matches = new ArrayList<>();
-		long startTime = System.currentTimeMillis();
-		System.out.println("Parsing league=" + league + " ...");
-		
 		Document doc = htmlProvider.get(BASE_URL + league.relUrl);
 		
-		Elements rows = doc.select("tbody tr");
+		Elements rows = doc.select("table[style] tbody > tr");
 		if (rows.isEmpty()) {
 			logError(new ScrapException("League " + league +  " contained no rows"));
 			return matches;
@@ -155,39 +148,39 @@ public class OddsPortalScrapper implements AutoCloseable {
 			String matchUrl = matchElement.attr("href");
 			Match match = new Match(league, matchName, matchUrl);
 			matches.add(match);
-
-			System.out.println("Adding match: " + match);
 		}
-		
-		long estimatedTime = System.currentTimeMillis() - startTime;
-		System.out.println("League: " + league + " parsed (" + matches.size() + " matches found) in " + estimatedTime / 1000.0 + " secs");
-		
-		
+
 		return matches;
 	}
 
 	public void run() throws Exception {
 		List<Match> matches = new ArrayList<>();
 		long startTime = System.currentTimeMillis();
-		
 		List<Sport> sports = getSports();
+		List<League> allLeagues = new ArrayList<>();
 		
-		long totalQueries = 0;
-		for (Sport sport : sports)
-			totalQueries += parseSport(sport).size();
+		System.out.println(sports.size() + " sports.");
 		
-		long currentQuery = 0;
 		for (Sport sport : sports) {
 			List<League> leagues = parseSport(sport);
-			for (League league : leagues) {
-				matches.addAll(parseLeague(league));
-				System.err.println(String.format("Progress: %d/%d ", currentQuery, totalQueries) + " (" + (double) ++currentQuery / ((double) currentQuery) + "%)");
-			}
+			System.out.println(sport + "> " + leagues.size() + " leagues.");
+			allLeagues.addAll(leagues);
+		}
+			
+		long currentQuery = 0;
+		long totalQueries = allLeagues.size();
+		for (League league : allLeagues) {
+			double progressPercent = 100 * ++currentQuery / (double) totalQueries;
+			matches.addAll(parseLeague(league));
+			System.err.println(String.format("Progress: %d/%d (%.2f%%) -- %d matches so far", currentQuery, totalQueries, progressPercent, matches.size()));
 		}
 		
 		long elapsedTimeSecs = (System.currentTimeMillis() - startTime) / 1000;
 		double matchesParsedPerSecond = matches.size() / (double) elapsedTimeSecs;
-		System.out.println(matches.size() + " matches found in " + matchesParsedPerSecond + " seconds (" + matchesParsedPerSecond + " matches/s)");
+		System.out.println(matches.size() + " matches found in " + elapsedTimeSecs + " seconds (" + matchesParsedPerSecond + " matches/s)");
+		
+		System.out.println("Matches: ");
+		matches.forEach(System.out::println);
 	}
 	
 	@Override
