@@ -12,6 +12,6 @@ public class Match {
 	}
 
 	public String toString() {
-		return league + "/" + name;
+		return "Match[" + league + "/" + name + "]";
 	}
 }

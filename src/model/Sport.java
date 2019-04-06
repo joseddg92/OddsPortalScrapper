@@ -8,4 +8,7 @@ public class Sport {
 		this.name = name;
 	}
 
+	public String toString() {
+		return "Sport[" + name + "]";
+	}
 }

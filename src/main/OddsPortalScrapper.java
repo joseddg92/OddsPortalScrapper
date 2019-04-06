@@ -37,17 +37,17 @@ public class OddsPortalScrapper implements AutoCloseable {
 		errors.add(e);
 	}
 	
-	private List<String> getSports() throws ScrapException {
+	private List<Sport> getSports() throws ScrapException {
 		Document startPage = htmlProvider.get(ENTRY_URL);
 		Elements tabs = startPage.select("div#tabdiv_sport_main li.tab");
-		List<String> sports = new ArrayList<>(tabs.size());
+		List<Sport> sports = new ArrayList<>(tabs.size());
 		
 		for (Element tab : tabs) {	
 			String onClickAttr = tab.selectFirst("a").attr("onclick");
 			Matcher m = sportsOnClickToURL_regex.matcher(onClickAttr);
 			if (m.find()) {
-				String sport = m.group(1);
-				sports.add(sport);
+				String sportName = m.group(1);
+				sports.add(new Sport(sportName));
 			} else {
 				logError(new ScrapException("Parsing a sport tab 'onclick' attribute, the regex did not match: " + onClickAttr, tab));
 			}
@@ -56,18 +56,17 @@ public class OddsPortalScrapper implements AutoCloseable {
 		return sports;
 	}
 	
-	private List<League> parseSport(String sportName) {
-		final Sport sport = new Sport(sportName);
+	private List<League> parseSport(Sport sport) {
 		List<League> leagues = new ArrayList<>();
 		long startTime = System.currentTimeMillis();
-		System.out.println("Parsing sport=" + sportName + " ...");
+		System.out.println("Parsing sport=" + sport + " ...");
 		
 		htmlProvider.get("http://www.google.es");
-		Document doc = htmlProvider.get(String.format(SPORT_URL_FORMAT, sportName));
+		Document doc = htmlProvider.get(String.format(SPORT_URL_FORMAT, sport));
 		
 		Elements rows = doc.select("tbody tr");
 		if (rows.isEmpty()) {
-			logError(new ScrapException("Sport " + sportName +  " contained no rows"));
+			logError(new ScrapException("Sport " + sport +  " contained no rows"));
 			return leagues;
 		}
 		
@@ -117,7 +116,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 		}
 		
 		long estimatedTime = System.currentTimeMillis() - startTime;
-		System.out.println("Sport " + sportName + " parsed (" + leagues.size() + " leagues found) in " + estimatedTime / 1000.0 + " secs");
+		System.out.println("Sport " + sport + " parsed (" + leagues.size() + " leagues found) in " + estimatedTime / 1000.0 + " secs");
 		
 		return leagues;
 	}
@@ -171,14 +170,14 @@ public class OddsPortalScrapper implements AutoCloseable {
 		List<Match> matches = new ArrayList<>();
 		long startTime = System.currentTimeMillis();
 		
-		List<String> sports = getSports();
+		List<Sport> sports = getSports();
 		
 		long totalQueries = 0;
-		for (String sport : sports)
+		for (Sport sport : sports)
 			totalQueries += parseSport(sport).size();
 		
 		long currentQuery = 0;
-		for (String sport : sports) {
+		for (Sport sport : sports) {
 			List<League> leagues = parseSport(sport);
 			for (League league : leagues) {
 				matches.addAll(parseLeague(league));
