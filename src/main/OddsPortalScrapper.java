@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -18,6 +19,7 @@ import model.League;
 import model.Match;
 import model.ScrapException;
 import model.Sport;
+import model.WebSection;
 
 public class OddsPortalScrapper implements AutoCloseable {
 	
@@ -152,8 +154,18 @@ public class OddsPortalScrapper implements AutoCloseable {
 
 		return matches;
 	}
+	
+	private void parseMatch(Match m) {
+		Map<WebSection, Document> tabs = htmlProvider.getAllTabs(m.url);
+		
+	}
 
 	public void run() throws Exception {
+		
+		Match m = new Match(null, null, "https://www.oddsportal.com/soccer/england/premier-league/newcastle-utd-southampton-fPjYqQjJ/");
+		parseMatch(m);
+		if (1==1) return;
+		
 		List<Match> matches = new ArrayList<>();
 		long startTime = System.currentTimeMillis();
 		List<Sport> sports = getSports();
