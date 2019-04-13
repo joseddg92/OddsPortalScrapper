@@ -18,8 +18,6 @@ public class Main {
 			/* Introduce another try block so that scrapper 
 			 * is not closed before the catch or finally blocks  */
 			try {
-				scrapper.run();
-				
 				List<ScrapException> errors = scrapper.getErrors();
 				if (!errors.isEmpty()) {
 					System.err.println(errors.size() + " non-critical errors");

@@ -1,8 +1,10 @@
 package scrapper;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -32,43 +34,83 @@ public class OddsPortalScrapper implements AutoCloseable {
 			
 	private SeleniumChromeProvider htmlProvider = new SeleniumChromeProvider();
 	private List<ScrapException> errors = new ArrayList<>();
+	private List<WeakReference<ParserListener>> listeners = new ArrayList<>();
 	
-	private void logError(ScrapException e) {
-		StackTraceElement errorLine = e.getStackTrace()[0];
-		
-		System.err.println("Non-critical error: (" + errorLine.getMethodName() + ":" +  errorLine.getLineNumber() + ")>  " + e.getMessage());
-		errors.add(e);
+	public void registerListener(ParserListener l) {
+		listeners.add(new WeakReference<>(l));
 	}
 	
-	private List<Sport> getSports() throws ScrapException {
+	public void unregisterListener(ParserListener l) {
+		for (WeakReference<ParserListener> w : listeners) {
+			if (w.get() != null && w.get().equals(l)) {
+				listeners.remove(w);
+				return;
+			}
+		}
+	}
+	
+	private boolean fireEventCheckStop(Sport obj) {
+		return this.<Sport>_internal_fireEventCheckStop(obj);
+	}
+	
+	private boolean fireEventCheckStop(League obj) {
+		return this.<League>_internal_fireEventCheckStop(obj);
+	}
+	
+	private boolean fireEventCheckStop(Match obj) {
+		return this.<Match>_internal_fireEventCheckStop(obj);
+	}
+	
+	private <T> boolean _internal_fireEventCheckStop(T obj) {
+		boolean keepGoing = true;
+	
+		Iterator<WeakReference<ParserListener>> it = listeners.iterator();
+		while (it.hasNext()) {
+			ParserListener listener = it.next().get();
+			if (listener == null) {
+				it.remove();
+				continue;
+			}
+
+			if (obj instanceof Sport)
+				keepGoing &= listener.onElementParsed((Sport) obj);
+			else if (obj instanceof League)
+				keepGoing &= listener.onElementParsed((League) obj);
+			else if (obj instanceof Match)
+				keepGoing &= listener.onElementParsed((Match) obj);
+			else 
+				assert false;
+		}
+		return !keepGoing;
+	}
+	
+	public void findSports() throws ScrapException {
 		Document startPage = htmlProvider.get(ENTRY_URL);
 		Elements tabs = startPage.select("div#tabdiv_sport_main li.tab");
-		List<Sport> sports = new ArrayList<>(tabs.size());
 		
 		for (Element tab : tabs) {	
 			String onClickAttr = tab.selectFirst("a").attr("onclick");
 			Matcher m = sportsOnClickToURL_regex.matcher(onClickAttr);
 			if (m.find()) {
 				String sportName = m.group(1);
-				sports.add(new Sport(sportName));
+				Sport sport = new Sport(sportName);
+				
+				if (fireEventCheckStop(sport))
+					return;
 			} else {
 				logError(new ScrapException("Parsing a sport tab 'onclick' attribute, the regex did not match: " + onClickAttr, tab));
 			}
 		}
-		
-		return sports;
 	}
 	
-	private List<League> parseSport(Sport sport) {
-		List<League> leagues = new ArrayList<>();
-		
+	public void parse(Sport sport) {
 		htmlProvider.get("http://www.google.es");
 		Document doc = htmlProvider.get(String.format(SPORT_URL_FORMAT, sport.name));
 		
 		Elements rows = doc.select("table[style] tbody > tr");
 		if (rows.isEmpty()) {
 			logError(new ScrapException("Sport " + sport +  " contained no rows"));
-			return leagues;
+			return;
 		}
 		
 		String countryName = "";
@@ -110,21 +152,20 @@ public class OddsPortalScrapper implements AutoCloseable {
 				}
 				
 				League l = new League(sport, country, leagueName, relativeUrl);
-				leagues.add(l);
+
+				if (fireEventCheckStop(l))
+					return;
 			}
 		}
-		
-		return leagues;
 	}
 	
-	private List<Match> parseLeague(League league) {
-		List<Match> matches = new ArrayList<>();
+	public void parse(League league) {
 		Document doc = htmlProvider.get(BASE_URL + league.relUrl);
 		
 		Elements rows = doc.select("table[style] tbody > tr");
 		if (rows.isEmpty()) {
 			logError(new ScrapException("League " + league +  " contained no rows"));
-			return matches;
+			return;
 		}
 		
 		final Collection<String> rowsClassesToSkip = Arrays.asList("center", "table-dummyrow");
@@ -146,14 +187,14 @@ public class OddsPortalScrapper implements AutoCloseable {
 			
 			String matchName = matchElement.text();
 			String matchUrl = matchElement.attr("href");
-			Match match = new Match(league, matchName, matchUrl);
-			matches.add(match);
+			Match match = new Match(league, matchName, BASE_URL + matchUrl);
+			
+			if (fireEventCheckStop(match))
+				return;
 		}
-
-		return matches;
 	}
 
-	private void parseMatch(Match m) {
+	public void parse(Match m) {
 		Map<WebSection, Document> tabs = htmlProvider.getAllTabs(m.url);
 		
 		for (Entry<WebSection, Document> sectionEntry : tabs.entrySet()) {
@@ -224,6 +265,22 @@ public class OddsPortalScrapper implements AutoCloseable {
 		}
 	}
 	
+	@Override
+	public void close() throws Exception {
+		htmlProvider.close();
+	}
+	
+	public List<ScrapException> getErrors() {
+		return Collections.unmodifiableList(errors);
+	}
+	
+	private void logError(ScrapException e) {
+		StackTraceElement errorLine = e.getStackTrace()[0];
+		
+		System.err.println("Non-critical error: (" + errorLine.getMethodName() + ":" +  errorLine.getLineNumber() + ")>  " + e.getMessage());
+		errors.add(e);
+	}
+	
 	private static double parseDoubleEmptyIsZero(String s) throws NumberFormatException {
 		if (s.trim().isEmpty())
 			return 0d;
@@ -236,44 +293,5 @@ public class OddsPortalScrapper implements AutoCloseable {
 			s += e.text();
 		
 		return s;
-	}
-
-	public void run() throws Exception {
-		List<Match> matches = new ArrayList<>();
-		long startTime = System.currentTimeMillis();
-		List<Sport> sports = getSports();
-		List<League> allLeagues = new ArrayList<>();
-		
-		System.out.println(sports.size() + " sports.");
-		
-		for (Sport sport : sports) {
-			List<League> leagues = parseSport(sport);
-			System.out.println(sport + "> " + leagues.size() + " leagues.");
-			allLeagues.addAll(leagues);
-		}
-			
-		long currentQuery = 0;
-		long totalQueries = allLeagues.size();
-		for (League league : allLeagues) {
-			double progressPercent = 100 * ++currentQuery / (double) totalQueries;
-			matches.addAll(parseLeague(league));
-			System.err.println(String.format("Progress: %d/%d (%.2f%%) -- %d matches so far", currentQuery, totalQueries, progressPercent, matches.size()));
-		}
-		
-		long elapsedTimeSecs = (System.currentTimeMillis() - startTime) / 1000;
-		double matchesParsedPerSecond = matches.size() / (double) elapsedTimeSecs;
-		System.out.println(matches.size() + " matches found in " + elapsedTimeSecs + " seconds (" + matchesParsedPerSecond + " matches/s)");
-		
-		System.out.println("Matches: ");
-		matches.forEach(System.out::println);
-	}
-	
-	@Override
-	public void close() throws Exception {
-		htmlProvider.close();
-	}
-	
-	public List<ScrapException> getErrors() {
-		return Collections.unmodifiableList(errors);
 	}
 }

@@ -104,8 +104,10 @@ public class SeleniumChromeProvider implements AutoCloseable {
 	}
 	
 	public Document get(String url) {
-		if (url != null)
+		if (url != null) {
+			System.out.println("Getting " + url + "...");
 			driver.get(url);
+		}
 		waitJs();
 		return Jsoup.parse(driver.getPageSource(), driver.getCurrentUrl());
 	}
