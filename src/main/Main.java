@@ -3,12 +3,15 @@ package main;
 import java.util.List;
 
 import model.ScrapException;
+import util.EclipseTools;
 
 public class Main {
 
 	public static void main(String[] args) throws Exception {
 		boolean pauseOnExit = false;
 
+		EclipseTools.fixConsole();
+		
 		System.setProperty("webdriver.chrome.driver", "C:\\chromedriver.exe");
 		try (OddsPortalScrapper scrapper = new OddsPortalScrapper()) {
 			/* Introduce another try block so that scrapper 
