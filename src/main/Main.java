@@ -3,6 +3,7 @@ package main;
 import java.util.List;
 
 import model.ScrapException;
+import scrapper.OddsPortalScrapper;
 import util.EclipseTools;
 
 public class Main {
