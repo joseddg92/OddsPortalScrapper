@@ -26,8 +26,8 @@ public class SeleniumChromeProvider implements AutoCloseable {
 	private ChromeDriver driver = new ChromeDriver();
 	private int loadTimeout = DEFAULT_WEBLOAD_TIMEOUT_SEC;
 	
-	private static final String USER = "sureTenis123";
-	private static final String PASSWORD = "6cJJFbDMrzmt5wt";
+	//private static final String USER = "sureTenis123";
+	//private static final String PASSWORD = "6cJJFbDMrzmt5wt";
 	
 	public SeleniumChromeProvider() {
 		//driver.manage().window().setPosition(new Point(1600, 0));
