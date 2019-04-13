@@ -11,7 +11,12 @@ public class ScrapException extends Exception {
 	}
 	
 	public ScrapException(String reason, Element we) {
-		super(reason);
+		this(reason, null, null);
+	}
+	
+	public ScrapException(String reason, Element we, Exception e) {
+		super(reason, e);
 		this.element = we;
 	}
+	
 }

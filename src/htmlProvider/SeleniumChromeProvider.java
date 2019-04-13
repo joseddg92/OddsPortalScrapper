@@ -1,6 +1,6 @@
 package htmlProvider;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -22,18 +22,22 @@ public class SeleniumChromeProvider implements AutoCloseable {
 	private static final int DEFAULT_WEBLOAD_TIMEOUT_SEC = 60;
 	private static final Function<? super WebDriver, Boolean> jsReadyCondition =
 			(ExpectedCondition<Boolean>) wd -> ((JavascriptExecutor) wd).executeScript("return document.readyState").equals("complete");
-
+			
 	private ChromeDriver driver = new ChromeDriver();
 	private int loadTimeout = DEFAULT_WEBLOAD_TIMEOUT_SEC;
 	
+	private static final String USER = "sureTenis123";
+	private static final String PASSWORD = "6cJJFbDMrzmt5wt";
+	
 	public SeleniumChromeProvider() {
 		//driver.manage().window().setPosition(new Point(1600, 0));
-		//driver.manage().window().maximize();
+		driver.manage().window().maximize();
 		driver.manage().timeouts().pageLoadTimeout(loadTimeout, TimeUnit.SECONDS);
 	}	
 	
 	public Map<WebSection, Document> getAllTabs(String url) {
-		Map<WebSection, Document> docPerTab = new HashMap<>();
+		// Use LinkedHashMap as it could be important to keep the original tab order
+		Map<WebSection, Document> docPerTab = new LinkedHashMap<>();
 
 		Document doc = get(url);
 		Elements tabs = doc.select("div#bettype-tabs li a");
@@ -56,8 +60,8 @@ public class SeleniumChromeProvider implements AutoCloseable {
 				String jsCode = tab.attr("onmousedown");
 				System.out.println("Loading tab " + tabTitle);
 				driver.executeScript(jsCode);
-				waitJs();
-				doc = get(url);
+				sleep(2000);
+				doc = get();
 			} else {
 				System.out.println("Loading tab " + tabTitle + " (was default)");
 				firstTab = false;
@@ -76,13 +80,18 @@ public class SeleniumChromeProvider implements AutoCloseable {
 					String jsCode = subtab.attr("onmousedown");
 					System.out.println("Loading subtab " + tabTitle + " > " + subtabTitle);
 					driver.executeScript(jsCode);
-					waitJs();
-					doc = get(url);
+					sleep(6000);
+					doc = get();
 				} else {
 					System.out.println("Loading subtab " + tabTitle + " > " + subtabTitle + " (was default)");
 					firstSubTab = false;
 				}
 				
+				/* Expand all bet groups by 'clicking' on them */
+				for (Element rowToBeExpanded : doc.select("#odds-data-table > div > div > strong > a"))
+					driver.executeScript(rowToBeExpanded.attr("onclick"));
+				
+				doc = get();
 				docPerTab.put(new WebSection(tabTitle, subtabTitle), doc);
 			}
 		}
@@ -90,13 +99,15 @@ public class SeleniumChromeProvider implements AutoCloseable {
 		return docPerTab;
 	}
 	
+	public Document get() {
+		return get(null);
+	}
+	
 	public Document get(String url) {
-		driver.get(url);
+		if (url != null)
+			driver.get(url);
 		waitJs();
-
-		Document doc = Jsoup.parse(driver.getPageSource(), driver.getCurrentUrl());
-
-		return doc;
+		return Jsoup.parse(driver.getPageSource(), driver.getCurrentUrl());
 	}
 	
 	@Override
@@ -106,5 +117,13 @@ public class SeleniumChromeProvider implements AutoCloseable {
 	
 	private void waitJs() {
 		new WebDriverWait(driver, loadTimeout).until(jsReadyCondition);
+	}
+	
+	private static void sleep(int ms) {
+
+		try {
+			Thread.sleep(ms);
+		} catch (InterruptedException e) {}
+		
 	}
 }

@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -60,7 +61,6 @@ public class OddsPortalScrapper implements AutoCloseable {
 	
 	private List<League> parseSport(Sport sport) {
 		List<League> leagues = new ArrayList<>();
-		long startTime = System.currentTimeMillis();
 		
 		htmlProvider.get("http://www.google.es");
 		Document doc = htmlProvider.get(String.format(SPORT_URL_FORMAT, sport.name));
@@ -114,8 +114,6 @@ public class OddsPortalScrapper implements AutoCloseable {
 			}
 		}
 		
-		long estimatedTime = System.currentTimeMillis() - startTime;
-
 		return leagues;
 	}
 	
@@ -154,18 +152,93 @@ public class OddsPortalScrapper implements AutoCloseable {
 
 		return matches;
 	}
-	
+
 	private void parseMatch(Match m) {
 		Map<WebSection, Document> tabs = htmlProvider.getAllTabs(m.url);
 		
+		for (Entry<WebSection, Document> sectionEntry : tabs.entrySet()) {
+			final WebSection section = sectionEntry.getKey();
+			final Document doc = sectionEntry.getValue();
+			
+			System.out.println("Parsing " + section + " ...");
+			
+			Elements oddTables = doc.select("div#odds-data-table div.table-container");
+			if (oddTables.isEmpty()) {
+				logError(new ScrapException("Could not locate any oddTable!", doc));
+				return;
+			}
+			
+			/* Do not parse exchanges for now */
+			oddTables.removeIf(oddTable -> oddTable.attr("class").contains("exchangeContainer"));
+
+			for (Element oddTable : oddTables) {
+				String oddTableTitle;
+				if (oddTables.size() == 1) {
+					oddTableTitle = "";
+				} else {
+					oddTableTitle = oddTable.selectFirst("strong").text();
+				}
+
+				Element headerRow = oddTable.selectFirst("thead > tr");
+				if (headerRow == null) {
+					logError(new ScrapException("No header row while parsing " + section + "in " + m, doc));
+					return;
+				}
+				
+				Elements columns = headerRow.select("tr a");
+				List<String> columnTitles = new ArrayList<>(columns.size());
+				for (Element column : columns) {
+					columnTitles.add(column.text());
+				}
+				System.out.println("\t" + section + " --> " + columnTitles);
+				
+				Elements rows = oddTable.select("table > tbody > tr");
+
+				int i=0;
+				for (Element row : rows) {
+					i++;
+					List<Double> odds = new ArrayList<>();
+					Elements oddElements = row.select("td.odds");
+					
+					if (oddElements.isEmpty())
+						continue;
+					
+					/* For now assume first column to be the bethouse */
+					Element bethouseElement = row.child(0);
+					String betHouse = combineAllText(bethouseElement.select("a"));
+
+					for (Element oddElement : oddElements) {
+						double odd = 0;
+						try {
+							odd = parseDoubleEmptyIsZero(combineAllText(oddElement.children()));
+						} catch (NumberFormatException e) {
+							logError(new ScrapException(m + ", " + section + " strange odd cell does not have an odd", row, e));
+						} finally {
+							/* Even if parsing fails, we need to add it to keep the rest of indexes */
+							odds.add(odd);
+						}
+					}
+					System.out.println("\t" + "\t" + "Section "  + oddTableTitle + ", Row " + i + ", bethouse: " + betHouse + ", odds: " + odds);
+				}
+			}
+		}
+	}
+	
+	private static double parseDoubleEmptyIsZero(String s) throws NumberFormatException {
+		if (s.trim().isEmpty())
+			return 0d;
+		return Double.parseDouble(s);
+	}
+	
+	private static String combineAllText(Collection<Element> elements) {
+		String s = "";
+		for (Element e : elements) 
+			s += e.text();
+		
+		return s;
 	}
 
 	public void run() throws Exception {
-		
-		Match m = new Match(null, null, "https://www.oddsportal.com/soccer/england/premier-league/newcastle-utd-southampton-fPjYqQjJ/");
-		parseMatch(m);
-		if (1==1) return;
-		
 		List<Match> matches = new ArrayList<>();
 		long startTime = System.currentTimeMillis();
 		List<Sport> sports = getSports();
