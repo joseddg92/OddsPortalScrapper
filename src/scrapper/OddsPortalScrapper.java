@@ -20,6 +20,7 @@ import htmlProvider.SeleniumChromeProvider;
 import model.Country;
 import model.League;
 import model.Match;
+import model.Notifiable;
 import model.ScrapException;
 import model.Sport;
 import model.WebSection;
@@ -49,19 +50,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 		}
 	}
 	
-	private boolean fireEventCheckStop(Sport obj) {
-		return this.<Sport>_internal_fireEventCheckStop(obj);
-	}
-	
-	private boolean fireEventCheckStop(League obj) {
-		return this.<League>_internal_fireEventCheckStop(obj);
-	}
-	
-	private boolean fireEventCheckStop(Match obj) {
-		return this.<Match>_internal_fireEventCheckStop(obj);
-	}
-	
-	private <T> boolean _internal_fireEventCheckStop(T obj) {
+	private boolean fireEventCheckStop(Notifiable obj) {
 		boolean keepGoing = true;
 	
 		Iterator<WeakReference<ParserListener>> it = listeners.iterator();
@@ -72,14 +61,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 				continue;
 			}
 
-			if (obj instanceof Sport)
-				keepGoing &= listener.onElementParsed((Sport) obj);
-			else if (obj instanceof League)
-				keepGoing &= listener.onElementParsed((League) obj);
-			else if (obj instanceof Match)
-				keepGoing &= listener.onElementParsed((Match) obj);
-			else 
-				assert false;
+			keepGoing &= obj.notify(listener);
 		}
 		return !keepGoing;
 	}

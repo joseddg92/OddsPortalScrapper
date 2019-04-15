@@ -1,6 +1,8 @@
 package model;
 
-public class Sport {
+import scrapper.ParserListener;
+
+public class Sport implements Notifiable {
 
 	public final String name;
 	
@@ -10,5 +12,9 @@ public class Sport {
 
 	public String toString() {
 		return "Sport[" + name + "]";
+	}
+
+	public boolean notify(ParserListener listener) {
+		return listener.onElementParsed(this);
 	}
 }

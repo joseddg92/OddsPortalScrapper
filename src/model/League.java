@@ -1,5 +1,8 @@
 package model;
-public class League {
+
+import scrapper.ParserListener;
+
+public class League implements Notifiable {
 	
 	public final Sport sport;
 	public final Country country;
@@ -17,4 +20,7 @@ public class League {
 		return "League[" + sport.name + "/" + country.name + "/" + name + "]";
 	}
 	
+	public boolean notify(ParserListener listener) {
+		return listener.onElementParsed(this);
+	}
 }

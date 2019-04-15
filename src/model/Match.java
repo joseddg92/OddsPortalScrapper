@@ -1,5 +1,8 @@
 package model;
-public class Match {
+
+import scrapper.ParserListener;
+
+public class Match implements Notifiable {
 
 	public final League league;
 	public final String name;
@@ -13,5 +16,9 @@ public class Match {
 
 	public String toString() {
 		return "Match[" + league + "/" + name + "]";
+	}
+	
+	public boolean notify(ParserListener listener) {
+		return listener.onElementParsed(this);
 	}
 }
