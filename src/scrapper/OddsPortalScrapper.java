@@ -107,7 +107,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 		htmlProvider.get("http://www.google.es");
 		Document doc = htmlProvider.get(String.format(SPORT_URL_FORMAT, sport.name));
 		
-		Elements rows = doc.select("table[style] tbody > tr");
+		Elements rows = doc.select("table[style=\"display: table;\"] tbody > tr");
 		if (rows.isEmpty()) {
 			logError(new ScrapException("Sport " + sport +  " contained no rows"));
 			return;
