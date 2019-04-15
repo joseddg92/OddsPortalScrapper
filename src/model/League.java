@@ -14,7 +14,7 @@ public class League {
 	}
 
 	public String toString() {
-		return "League[" + sport.name + "/" + country.name + "/" + name + "] (" + relUrl + ")";
+		return "League[" + sport.name + "/" + country.name + "/" + name + "]";
 	}
 	
 }
