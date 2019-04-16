@@ -34,7 +34,6 @@ public class OddsPortalScrapper implements AutoCloseable {
 	private static final Pattern sportsOnClickToURL_regex = Pattern.compile("tab_sport_main.select\\( '(.*)'\\);this.blur\\(\\);return false;");	
 			
 	private SeleniumChromeProvider htmlProvider = new SeleniumChromeProvider();
-	private List<ScrapException> errors = new ArrayList<>();
 	private List<WeakReference<ParserListener>> listeners = new ArrayList<>();
 	
 	public void registerListener(ParserListener l) {
@@ -252,15 +251,17 @@ public class OddsPortalScrapper implements AutoCloseable {
 		htmlProvider.close();
 	}
 	
-	public List<ScrapException> getErrors() {
-		return Collections.unmodifiableList(errors);
-	}
-	
 	private void logError(ScrapException e) {
 		StackTraceElement errorLine = e.getStackTrace()[0];
 		
 		System.err.println("Non-critical error: (" + errorLine.getMethodName() + ":" +  errorLine.getLineNumber() + ")>  " + e.getMessage());
-		errors.add(e);
+		
+		for (WeakReference<ParserListener> w : listeners) {
+			if (w.get() != null) {
+				w.get().onError(e);
+				return;
+			}
+		}
 	}
 	
 	private static double parseDoubleEmptyIsZero(String s) throws NumberFormatException {

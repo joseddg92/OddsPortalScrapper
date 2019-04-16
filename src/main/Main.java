@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.List;
 
 import model.League;
 import model.Match;
@@ -20,9 +19,10 @@ public class Main {
 	private static final String ERROR_REPORT_PATH = "log";
 	
 	public static void main(String[] args) throws Exception {
+		final String runDateString = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date());
 		EclipseTools.fixConsole();
-
 		System.setProperty("webdriver.chrome.driver", "C:\\chromedriver.exe");
+		
 		try (OddsPortalScrapper scrapper = new OddsPortalScrapper()) {
 			boolean pauseOnExit = false;
 			/* Introduce another try block so that scrapper 
@@ -30,6 +30,8 @@ public class Main {
 			try {
 				ParserListener listener = new ParserListener() {
 
+					int nErrors = 0;
+					
 					@Override
 					public boolean onElementParsed(Match match) {
 						scrapper.parse(match);
@@ -47,28 +49,24 @@ public class Main {
 						scrapper.parse(sport);
 						return true;
 					}
+
+					@Override
+					public void onError(ScrapException error) {
+						nErrors++;
+
+						System.err.println("Error logged: " + error.getMessage());
+						String reportName = String.format("%s_%d.log", runDateString, nErrors);
+						try (PrintWriter writer = new PrintWriter(new File(ERROR_REPORT_PATH, reportName))) {
+								error.logTo(writer);
+						} catch (IOException e) {
+							System.err.println("Could not log exception.");
+							e.printStackTrace();
+						}
+					}
 				};
 				
 				scrapper.registerListener(listener); 
 				scrapper.findSports();
-				
-				List<ScrapException> errors = scrapper.getErrors();
-				if (!errors.isEmpty()) {
-					int errorNumber = 0;
-					String currentDateString = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date());
-					for (ScrapException error : errors) {
-						System.err.println("Exception " + errorNumber);
-						error.printStackTrace();
-						String reportName = String.format("%s_%d.log", currentDateString, ++errorNumber);
-						try (PrintWriter writer = new PrintWriter(new File(ERROR_REPORT_PATH, reportName))) {
-								error.logTo(writer);
-							} catch (IOException e) {
-								e.printStackTrace();
-							}
-					}
-					
-					System.err.println(errors.size() + " non-critical errors logged");
-				}
 			} catch (Exception e) {
 				System.err.println("Critical exception: ");
 				e.printStackTrace();
