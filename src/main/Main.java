@@ -1,5 +1,10 @@
 package main;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 
 import model.League;
@@ -12,6 +17,8 @@ import util.EclipseTools;
 
 public class Main {
 
+	private static final String ERROR_REPORT_PATH = "log";
+	
 	public static void main(String[] args) throws Exception {
 		EclipseTools.fixConsole();
 
@@ -47,8 +54,20 @@ public class Main {
 				
 				List<ScrapException> errors = scrapper.getErrors();
 				if (!errors.isEmpty()) {
-					System.err.println(errors.size() + " non-critical errors");
-					pauseOnExit = true;
+					int errorNumber = 0;
+					String currentDateString = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date());
+					for (ScrapException error : errors) {
+						System.err.println("Exception " + errorNumber);
+						error.printStackTrace();
+						String reportName = String.format("%s_%d.log", currentDateString, ++errorNumber);
+						try (PrintWriter writer = new PrintWriter(new File(ERROR_REPORT_PATH, reportName))) {
+								error.logTo(writer);
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+					}
+					
+					System.err.println(errors.size() + " non-critical errors logged");
 				}
 			} catch (Exception e) {
 				System.err.println("Critical exception: ");

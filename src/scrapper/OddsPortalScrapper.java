@@ -187,7 +187,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 			
 			Elements oddTables = doc.select("div#odds-data-table div.table-container");
 			if (oddTables.isEmpty()) {
-				logError(new ScrapException("Could not locate any oddTable!", doc));
+				logError(new ScrapException("Could not locate any oddTable, " + section +", " + m, doc));
 				return;
 			}
 			

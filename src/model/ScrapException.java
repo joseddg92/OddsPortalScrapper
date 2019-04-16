@@ -1,4 +1,7 @@
 package model;
+import java.io.IOException;
+import java.io.PrintWriter;
+
 import org.jsoup.nodes.Element;
 
 public class ScrapException extends Exception {
@@ -19,4 +22,19 @@ public class ScrapException extends Exception {
 		this.element = we;
 	}
 	
+	public void logTo(PrintWriter out) throws IOException {
+		printStackTrace(out);
+		out.append("\n");
+	
+		if (element != null) {
+			out.append("HTML element:\n");
+			out.append(element.outerHtml());
+			out.append("\n");
+			
+			out.append("HTML document:\n");
+			out.append(element.parents().last().outerHtml());
+			out.append("\n");
+		}
+		
+	}
 }
