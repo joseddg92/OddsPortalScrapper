@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -20,10 +21,12 @@ import htmlProvider.SeleniumChromeProvider;
 import model.Country;
 import model.League;
 import model.Match;
+import model.MatchData;
 import model.Notifiable;
 import model.ScrapException;
 import model.Sport;
 import model.WebSection;
+import model.MatchData.OddKey;
 
 public class OddsPortalScrapper implements AutoCloseable {
 	
@@ -176,6 +179,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 	}
 
 	public void parse(Match m) {
+		final MatchData matchData = new MatchData(m);
 		Map<WebSection, Document> tabs = htmlProvider.getAllTabs(m.url);
 		
 		for (Entry<WebSection, Document> sectionEntry : tabs.entrySet()) {
@@ -194,25 +198,40 @@ public class OddsPortalScrapper implements AutoCloseable {
 			oddTables.removeIf(oddTable -> oddTable.attr("class").contains("exchangeContainer"));
 
 			for (Element oddTable : oddTables) {
-				String oddTableTitle;
-				if (oddTables.size() == 1) {
-					oddTableTitle = "";
-				} else {
+				String oddTableTitle = null;
+				if (oddTables.size() > 1) {
 					oddTableTitle = oddTable.selectFirst("strong").text();
 				}
-
+				
 				Element headerRow = oddTable.selectFirst("thead > tr");
 				if (headerRow == null) {
 					logError(new ScrapException("No header row while parsing " + section + "in " + m, doc));
 					return;
 				}
 				
-				Elements columns = headerRow.select("tr a");
-				List<String> columnTitles = new ArrayList<>(columns.size());
-				for (Element column : columns) {
-					columnTitles.add(column.text());
+				List<String> columns = headerRow.select("tr a").stream().map(e -> e.text()).collect(Collectors.toList());
+				int nColumns = columns.size();
+				
+				/* Check first and last columns are as expected, and remove them */
+				if (nColumns < 3) {
+					logError(new ScrapException("Expected at least 3 columns, but got " + nColumns + " instead.", headerRow));
+					continue;
 				}
-				System.out.println("\t" + section + " --> " + columnTitles);
+				String firstColumn = columns.get(0);
+				String lastColumn = columns.get(nColumns - 1);
+				if (!firstColumn.trim().equals("Bookmakers")) {
+					logError(new ScrapException("Strange first column: " + columns.get(0), headerRow));
+					continue;
+				}
+				if (!lastColumn.trim().equals("Payout")) {
+					logError(new ScrapException("Strange last column: " + columns.get(0), headerRow));
+					continue;
+				}
+				columns.remove(firstColumn);
+				columns.remove(lastColumn);
+				nColumns -= 2;
+				System.out.println("\t" + section + " --> " + columns);
+				
 				
 				Elements rows = oddTable.select("table > tbody > tr");
 
@@ -228,6 +247,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 					/* For now assume first column to be the bethouse */
 					Element bethouseElement = row.child(0);
 					String betHouse = combineAllText(bethouseElement.select("a"));
+					final OddKey key = new OddKey(section, oddTableTitle, betHouse);
 
 					for (Element oddElement : oddElements) {
 						double odd = 0;
@@ -240,10 +260,21 @@ public class OddsPortalScrapper implements AutoCloseable {
 							odds.add(odd);
 						}
 					}
+					
+					if (odds.size() != nColumns) {
+						logError(new ScrapException("Strange number of odds, expected: " + columns + " only got: " + odds, row));
+						continue;
+					}
+					
+					if (!matchData.addOdd(key, columns, odds))
+						logError(new ScrapException("Could not insert odds: " + columns + " -> " + odds, row));
+					
 					System.out.println("\t" + "\t" + "Section "  + oddTableTitle + ", Row " + i + ", bethouse: " + betHouse + ", odds: " + odds);
 				}
 			}
 		}
+		
+		fireEventCheckStop(matchData);
 	}
 	
 	@Override

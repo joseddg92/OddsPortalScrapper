@@ -5,9 +5,13 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import model.League;
 import model.Match;
+import model.MatchData;
+import model.MatchData.OddKey;
 import model.ScrapException;
 import model.Sport;
 import scrapper.OddsPortalScrapper;
@@ -33,6 +37,20 @@ public class Main {
 					int nErrors = 0;
 					
 					@Override
+					public void onError(ScrapException error) {
+						nErrors++;
+
+						System.err.println("Error logged: " + error.getMessage());
+						String reportName = String.format("%s_%d.log", runDateString, nErrors);
+						try (PrintWriter writer = new PrintWriter(new File(ERROR_REPORT_PATH, reportName))) {
+								error.logTo(writer);
+						} catch (IOException e) {
+							System.err.println("Could not log exception.");
+							e.printStackTrace();
+						}
+					}
+					
+					@Override
 					public boolean onElementParsed(Match match) {
 						scrapper.parse(match);
 						return false;
@@ -51,17 +69,14 @@ public class Main {
 					}
 
 					@Override
-					public void onError(ScrapException error) {
-						nErrors++;
-
-						System.err.println("Error logged: " + error.getMessage());
-						String reportName = String.format("%s_%d.log", runDateString, nErrors);
-						try (PrintWriter writer = new PrintWriter(new File(ERROR_REPORT_PATH, reportName))) {
-								error.logTo(writer);
-						} catch (IOException e) {
-							System.err.println("Could not log exception.");
-							e.printStackTrace();
+					public boolean onElementParsed(MatchData data) {
+						System.out.println(data.match + " parsed!");
+						
+						for (Entry<OddKey, Map<String,Double>> entry : data.getOdds().entrySet()) {
+							System.out.println(entry.getKey() + " -> " + entry.getValue().size() + " results");
 						}
+						
+						return true;
 					}
 				};
 				
