@@ -283,10 +283,6 @@ public class OddsPortalScrapper implements AutoCloseable {
 	}
 	
 	private void logError(ScrapException e) {
-		StackTraceElement errorLine = e.getStackTrace()[0];
-		
-		System.err.println("Non-critical error: (" + errorLine.getMethodName() + ":" +  errorLine.getLineNumber() + ")>  " + e.getMessage());
-		
 		for (WeakReference<ParserListener> w : listeners) {
 			if (w.get() != null) {
 				w.get().onError(e);
