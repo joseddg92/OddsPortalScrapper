@@ -31,9 +31,12 @@ public class ScrapException extends Exception {
 			out.append(element.outerHtml());
 			out.append("\n");
 			
-			out.append("HTML document:\n");
-			out.append(element.parents().last().outerHtml());
-			out.append("\n");
+			Element root = element.parents().last();
+			if (root != null) {
+				out.append("HTML document:\n");
+				out.append(root.outerHtml());
+				out.append("\n");
+			}
 		}
 		
 	}
