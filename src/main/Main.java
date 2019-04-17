@@ -4,14 +4,13 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
-import java.util.Map;
-import java.util.Map.Entry;
+import java.util.List;
 
 import model.League;
 import model.Match;
 import model.MatchData;
-import model.MatchData.OddKey;
 import model.ScrapException;
 import model.Sport;
 import scrapper.OddsPortalScrapper;
@@ -32,6 +31,7 @@ public class Main {
 			/* Introduce another try block so that scrapper 
 			 * is not closed before the catch or finally blocks  */
 			try {
+				List<Match> matches = new ArrayList<>();
 				ParserListener listener = new ParserListener() {
 
 					int nErrors = 0;
@@ -48,18 +48,24 @@ public class Main {
 							System.err.println("Could not log exception.");
 							e.printStackTrace();
 						}
+						
+						try {
+							System.in.read();
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
 					}
 					
 					@Override
 					public boolean onElementParsed(Match match) {
-						scrapper.parse(match);
-						return false;
+						matches.add(match);
+						return true;
 					}
 					
 					@Override
 					public boolean onElementParsed(League league) {
 						scrapper.parse(league);
-						return false;
+						return true;
 					}
 					
 					@Override
@@ -71,17 +77,27 @@ public class Main {
 					@Override
 					public boolean onElementParsed(MatchData data) {
 						System.out.println(data.match + " parsed!");
-						
-						for (Entry<OddKey, Map<String,Double>> entry : data.getOdds().entrySet()) {
-							System.out.println(entry.getKey() + " -> " + entry.getValue().size() + " results");
-						}
-						
 						return true;
 					}
 				};
 				
-				scrapper.registerListener(listener); 
+				scrapper.registerListener(listener);
+				long timeStart = System.currentTimeMillis();
 				scrapper.findSports();
+				long timeEnd = System.currentTimeMillis();
+				
+				System.out.format("It took %d ms to parse %d matches (%.2f matches/sec)", timeEnd- timeStart, matches.size(), matches.size() / (double) ((timeEnd- timeStart)) / 1000);
+				
+				timeStart = System.currentTimeMillis();
+				int i = 0;
+				for (Match match : matches) {
+					System.out.println(i++ + "/" + matches.size());
+					scrapper.parse(match);
+				}
+				timeEnd = System.currentTimeMillis();
+				System.out.format("It took %d ms to load %d matches (%.2f matches/sec)", timeEnd- timeStart, matches.size(), matches.size() / (double) ((timeEnd- timeStart)) / 1000);
+				
+				
 			} catch (Exception e) {
 				System.err.println("Critical exception: ");
 				e.printStackTrace();
