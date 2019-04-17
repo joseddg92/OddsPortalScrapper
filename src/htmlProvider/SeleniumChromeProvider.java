@@ -9,10 +9,13 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.support.ui.ExpectedCondition;
+import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 import model.WebSection;
@@ -60,7 +63,7 @@ public class SeleniumChromeProvider implements AutoCloseable {
 				String jsCode = tab.attr("onmousedown");
 				System.out.println("Loading tab " + tabTitle);
 				driver.executeScript(jsCode);
-				sleep(2000);
+				waitLoadSpinner();
 				doc = get();
 			} else {
 				System.out.println("Loading tab " + tabTitle + " (was default)");
@@ -80,7 +83,7 @@ public class SeleniumChromeProvider implements AutoCloseable {
 					String jsCode = subtab.attr("onmousedown");
 					System.out.println("Loading subtab " + tabTitle + " > " + subtabTitle);
 					driver.executeScript(jsCode);
-					sleep(6000);
+					waitLoadSpinner();
 					doc = get();
 				} else {
 					System.out.println("Loading subtab " + tabTitle + " > " + subtabTitle + " (was default)");
@@ -121,11 +124,28 @@ public class SeleniumChromeProvider implements AutoCloseable {
 		new WebDriverWait(driver, loadTimeout).until(jsReadyCondition);
 	}
 	
+	private void waitLoadSpinner() {
+		/* 
+		 * Wait for the spinner to appear, and then to disappear. 
+		 * If it is not found within a second, keep going as maybe
+		 * we didn't give it time to appear.
+		 */
+		try {
+			new WebDriverWait(driver, 1).until(ExpectedConditions.visibilityOfElementLocated(By.id("event-wait-msg-main")));
+		} catch (TimeoutException e) {}
+		
+		new WebDriverWait(driver, loadTimeout).until(ExpectedConditions.invisibilityOfElementLocated(By.id("event-wait-msg-main")));
+		
+		/* After the spinner has disappeared, js is changing the DOM, so wait for it to finish */
+		waitJs();
+		
+		/* Old 'safe' implementation: */
+		//sleep(6000);
+	}
+	
 	private static void sleep(int ms) {
-
 		try {
 			Thread.sleep(ms);
 		} catch (InterruptedException e) {}
-		
 	}
 }
