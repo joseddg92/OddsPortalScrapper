@@ -214,7 +214,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 				
 				/* Check first and last columns are as expected, and remove them */
 				if (nColumns < 3) {
-					logError(new ScrapException("Expected at least 3 columns, but got " + nColumns + " instead.", headerRow));
+					logError(new ScrapException("Expected at least 3 columns, but got " + columns + " instead.", headerRow));
 					continue;
 				}
 				String firstColumn = columns.get(0);
