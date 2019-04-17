@@ -22,11 +22,12 @@ import model.Country;
 import model.League;
 import model.Match;
 import model.MatchData;
+import model.MatchData.OddKey;
 import model.Notifiable;
 import model.ScrapException;
 import model.Sport;
 import model.WebSection;
-import model.MatchData.OddKey;
+import util.Utils;
 
 public class OddsPortalScrapper implements AutoCloseable {
 	
@@ -244,13 +245,13 @@ public class OddsPortalScrapper implements AutoCloseable {
 					
 					/* For now assume first column to be the bethouse */
 					Element bethouseElement = row.child(0);
-					String betHouse = combineAllText(bethouseElement.select("a"));
+					String betHouse = Utils.combineAllText(bethouseElement.select("a"));
 					final OddKey key = new OddKey(section, oddTableTitle, betHouse);
 
 					for (Element oddElement : oddElements) {
 						double odd = 0;
 						try {
-							odd = parseDoubleEmptyIsZero(combineAllText(oddElement.children()));
+							odd = Utils.parseDoubleEmptyIsZero(Utils.combineAllText(oddElement.children()));
 						} catch (NumberFormatException e) {
 							logError(new ScrapException(m + ", " + section + " strange odd cell does not have an odd", row, e));
 						} finally {
@@ -287,19 +288,5 @@ public class OddsPortalScrapper implements AutoCloseable {
 				return;
 			}
 		}
-	}
-	
-	private static double parseDoubleEmptyIsZero(String s) throws NumberFormatException {
-		if (s.trim().isEmpty())
-			return 0d;
-		return Double.parseDouble(s);
-	}
-	
-	private static String combineAllText(Collection<Element> elements) {
-		String s = "";
-		for (Element e : elements) 
-			s += e.text();
-		
-		return s;
 	}
 }
