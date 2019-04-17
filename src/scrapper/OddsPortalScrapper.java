@@ -213,23 +213,21 @@ public class OddsPortalScrapper implements AutoCloseable {
 				int nColumns = columns.size();
 				
 				/* Check first and last columns are as expected, and remove them */
-				if (nColumns < 3) {
-					logError(new ScrapException("Expected at least 3 columns, but got " + columns + " instead.", headerRow));
-					continue;
-				}
 				String firstColumn = columns.get(0);
 				String lastColumn = columns.get(nColumns - 1);
 				if (!firstColumn.trim().equals("Bookmakers")) {
 					logError(new ScrapException("Strange first column: " + columns.get(0), headerRow));
 					continue;
+				} else {
+					columns.remove(firstColumn);
+					nColumns--;
 				}
-				if (!lastColumn.trim().equals("Payout")) {
-					logError(new ScrapException("Strange last column: " + columns.get(0), headerRow));
-					continue;
+				if (lastColumn.trim().equals("Payout")) {
+					columns.remove(lastColumn);
+					nColumns--;
 				}
-				columns.remove(firstColumn);
-				columns.remove(lastColumn);
-				nColumns -= 2;
+				
+				
 				System.out.println("\t" + section + " --> " + columns);
 				
 				
