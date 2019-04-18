@@ -134,7 +134,9 @@ public class SeleniumChromeProvider implements AutoCloseable {
 			new WebDriverWait(driver, 1).until(ExpectedConditions.visibilityOfElementLocated(By.id("event-wait-msg-main")));
 		} catch (TimeoutException e) {}
 		
-		new WebDriverWait(driver, loadTimeout).until(ExpectedConditions.invisibilityOfElementLocated(By.id("event-wait-msg-main")));
+		try {
+			new WebDriverWait(driver, loadTimeout).until(ExpectedConditions.invisibilityOfElementLocated(By.id("event-wait-msg-main")));
+		} catch (TimeoutException e) {}
 		
 		/* After the spinner has disappeared, js is changing the DOM, so wait for it to finish */
 		waitJs();
