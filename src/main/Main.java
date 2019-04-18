@@ -95,7 +95,7 @@ public class Main {
 					scrapper.parse(match);
 				}
 				timeEnd = System.currentTimeMillis();
-				System.out.format("It took %d ms to load %d matches (%.2f matches/sec)", timeEnd- timeStart, matches.size(), matches.size() / (double) ((timeEnd- timeStart)) / 1000);
+				System.out.format("It took %d ms to load %d matches (%.2f sec/match)", timeEnd - timeStart, matches.size(), (timeEnd- timeStart) / (1000d * (double) matches.size()));
 				
 				
 			} catch (Exception e) {
