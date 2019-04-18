@@ -13,6 +13,7 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.support.ui.ExpectedCondition;
 import org.openqa.selenium.support.ui.ExpectedConditions;
@@ -30,8 +31,8 @@ public class SeleniumChromeProvider implements AutoCloseable {
 	private ChromeDriver driver = new ChromeDriver();
 	private int loadTimeout = DEFAULT_WEBLOAD_TIMEOUT_SEC;
 	
-	//private static final String USER = "sureTenis123";
-	//private static final String PASSWORD = "6cJJFbDMrzmt5wt";
+	private static final String USER = "sureTenis123";
+	private static final String PASSWORD = "6cJJFbDMrzmt5wt";
 	
 	public SeleniumChromeProvider() {
 		//driver.manage().window().setPosition(new Point(1600, 0));
@@ -119,12 +120,41 @@ public class SeleniumChromeProvider implements AutoCloseable {
 			driver.get(url);
 		}
 		waitJs();
-		return Jsoup.parse(driver.getPageSource(), driver.getCurrentUrl());
+		Document doc = Jsoup.parse(driver.getPageSource(), driver.getCurrentUrl());
+		
+		if (!isLoggedIn(doc)) {
+			System.out.println("Not logged in, login in...");
+			logIn();
+			return get(url);
+		}
+		
+		return doc;
 	}
 	
 	@Override
 	public void close() throws Exception {
 		driver.close();
+	}
+	
+	private void logIn() {
+		driver.get("https://www.oddsportal.com/login/");
+		waitJs();
+		WebElement userNameTextField = driver.findElement(By.id("login-username1"));
+		WebElement passwordTextfield = driver.findElement(By.id("login-password1"));
+		userNameTextField.sendKeys(USER);
+		passwordTextfield.sendKeys(PASSWORD);
+
+		driver.findElement(By.cssSelector("div.item > button[name=login-submit]")).click();
+
+		waitJs();
+	}
+	
+	private boolean isLoggedIn(Document doc) {
+		/* Assume logged for pages othe than oddsportal.com */
+		if (!driver.getCurrentUrl().contains("oddsportal.com"))
+				return true;
+		
+		return doc.selectFirst("button[name=login-submit]") == null; 
 	}
 	
 	private void waitJs() {
