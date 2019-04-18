@@ -8,8 +8,8 @@ import java.util.TimeZone;
 import org.jsoup.nodes.Element;
 
 public class Utils {
-	public static LocalDateTime msTimestampToDate(long timestamp) {
-		return LocalDateTime.ofInstant(Instant.ofEpochMilli(timestamp), 
+	public static LocalDateTime secTimestampToDate(long timestamp) {
+		return LocalDateTime.ofInstant(Instant.ofEpochSecond(timestamp),
 		                                TimeZone.getDefault().toZoneId());
 	}
 	
