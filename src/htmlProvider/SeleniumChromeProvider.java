@@ -147,14 +147,5 @@ public class SeleniumChromeProvider implements AutoCloseable {
 		
 		/* After the spinner has disappeared, js is changing the DOM, so wait for it to finish */
 		waitJs();
-		
-		/* Old 'safe' implementation: */
-		//sleep(6000);
-	}
-	
-	private static void sleep(int ms) {
-		try {
-			Thread.sleep(ms);
-		} catch (InterruptedException e) {}
 	}
 }
