@@ -181,7 +181,13 @@ public class OddsPortalScrapper implements AutoCloseable {
 
 	public void parse(Match m) {
 		final MatchData matchData = new MatchData(m);
-		Map<WebSection, Document> tabs = htmlProvider.getAllTabs(m.url);
+		Map<WebSection, Document> tabs; 
+		try {
+			tabs = htmlProvider.getAllTabs(m.url);
+		} catch (ScrapException e) {
+			logError(e);
+			return;
+		}
 		
 		for (Entry<WebSection, Document> sectionEntry : tabs.entrySet()) {
 			final WebSection section = sectionEntry.getKey();

@@ -18,6 +18,7 @@ import org.openqa.selenium.support.ui.ExpectedCondition;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
+import model.ScrapException;
 import model.WebSection;
 
 public class SeleniumChromeProvider implements AutoCloseable {
@@ -38,7 +39,7 @@ public class SeleniumChromeProvider implements AutoCloseable {
 		driver.manage().timeouts().pageLoadTimeout(loadTimeout, TimeUnit.SECONDS);
 	}	
 	
-	public Map<WebSection, Document> getAllTabs(String url) {
+	public Map<WebSection, Document> getAllTabs(String url) throws ScrapException {
 		// Use LinkedHashMap as it could be important to keep the original tab order
 		Map<WebSection, Document> docPerTab = new LinkedHashMap<>();
 
@@ -47,6 +48,12 @@ public class SeleniumChromeProvider implements AutoCloseable {
 		/* The tab that is selected by default is the current element and does not have
 		 * a <a> element, so manually append it. */
 		Element activeTab = doc.selectFirst("div#bettype-tabs li.active strong span");
+		if (activeTab == null) {
+			if (tabs.size() != 0)
+				throw new ScrapException("tabs != 0 but no active tab", doc);
+			return docPerTab;
+		}
+		
 		String tabTitle = activeTab.text();
 		tabs.add(0, activeTab);
 		boolean firstTab = true;
