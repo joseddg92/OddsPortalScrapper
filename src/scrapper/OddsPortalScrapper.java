@@ -180,7 +180,6 @@ public class OddsPortalScrapper implements AutoCloseable {
 	}
 
 	public void parse(Match m) {
-		final MatchData matchData = new MatchData(m);
 		Map<WebSection, Document> tabs; 
 		try {
 			tabs = htmlProvider.getAllTabs(m.url);
@@ -188,6 +187,34 @@ public class OddsPortalScrapper implements AutoCloseable {
 			logError(e);
 			return;
 		}
+		
+		if (tabs.isEmpty()) {
+			logError(new ScrapException("No tabs! " + m));
+			return;
+		}
+
+		Document firstTab = tabs.values().iterator().next();
+		Element dateElement = firstTab.selectFirst("p.date");
+		if (dateElement == null) {
+			logError(new ScrapException("Could not find match time! " + m, firstTab));
+			return;
+		}
+		
+		final Pattern dateClassPattern = Pattern.compile("t([0-9]+)-");
+		Matcher matcher = dateClassPattern.matcher(dateElement.attr("class"));
+		if (!matcher.find() || matcher.groupCount() > 1) {
+			logError(new ScrapException("Could not parse time: " + dateElement.attr("class") + "," + m, firstTab));
+			return;
+		}
+		long dateTimestamp;
+		try {
+			dateTimestamp = Long.parseLong(matcher.group(1));
+		} catch (NumberFormatException e) {
+			logError(new ScrapException("Could not parse time: " + dateElement.attr("class") + "," + m, firstTab, e));
+			return;
+		}
+		
+		final MatchData matchData = new MatchData(m, dateTimestamp);
 		
 		for (Entry<WebSection, Document> sectionEntry : tabs.entrySet()) {
 			final WebSection section = sectionEntry.getKey();

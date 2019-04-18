@@ -42,12 +42,13 @@ public class MatchData implements Notifiable {
 	}
 	
 	final public Match match;
-	
+	final public long beginTimeStamp;
 	/* e.g. {WebSection[AH, 1st Half], -1.5, 888Sport} -> [1 (meaning +) -> 8.2, 2 (meaning -) -> 1.08] */
 	private Map<OddKey, Map<String,Double>> odds = new HashMap<>(); 
 	
-	public MatchData(Match match) {
+	public MatchData(Match match, long beginTimeStamp) {
 		this.match = match;
+		this.beginTimeStamp = beginTimeStamp;
 	}
 	
 	public boolean addOdd(OddKey key, List<String> columns, List<Double> newOdds) {
