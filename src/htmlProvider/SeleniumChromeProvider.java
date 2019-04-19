@@ -1,6 +1,8 @@
 package htmlProvider;
 
+import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -15,6 +17,7 @@ import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.support.ui.ExpectedCondition;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
@@ -27,14 +30,42 @@ public class SeleniumChromeProvider implements AutoCloseable {
 	private static final int DEFAULT_WEBLOAD_TIMEOUT_SEC = 60;
 	private static final Function<? super WebDriver, Boolean> jsReadyCondition =
 			(ExpectedCondition<Boolean>) wd -> ((JavascriptExecutor) wd).executeScript("return document.readyState").equals("complete");
+	
+	private static final List<String> defaultOptions = Arrays.asList(
+			"--no-sandbox",
+			"--disable-impl-side-painting",
+			"--disable-setuid-sandbox",
+			"--disable-seccomp-filter-sandbox",
+			"--disable-breakpad",
+			"--disable-client-side-phishing-detection",
+			"--disable-cast",
+			"--disable-cast-streaming-hw-encoding",
+			"--disable-cloud-import",
+			"--disable-popup-blocking",
+			"--ignore-certificate-errors",
+			"--disable-session-crashed-bubble",
+			"--disable-ipv6",
+			"--allow-http-screen-capture",
+			"--blink-settings=imagesEnabled=false"
+	);
 			
-	private ChromeDriver driver = new ChromeDriver();
+	private ChromeDriver driver;
 	private int loadTimeout = DEFAULT_WEBLOAD_TIMEOUT_SEC;
 	
 	private static final String USER = "sureTenis123";
 	private static final String PASSWORD = "6cJJFbDMrzmt5wt";
 	
 	public SeleniumChromeProvider() {
+		this(false);
+	}
+	
+	public SeleniumChromeProvider(boolean headless) {
+		ChromeOptions options = new ChromeOptions();
+		if (headless)
+			options.addArguments("--headless");
+		
+		options.addArguments(defaultOptions);
+		driver = new ChromeDriver(options);
 		//driver.manage().window().setPosition(new Point(1600, 0));
 		driver.manage().window().maximize();
 		driver.manage().timeouts().pageLoadTimeout(loadTimeout, TimeUnit.SECONDS);
