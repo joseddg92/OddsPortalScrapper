@@ -105,12 +105,10 @@ public class SeleniumChromeProvider implements AutoCloseable {
 					tabTitle = tab.text();
 
 				String jsCode = tab.attr("onmousedown");
-				System.out.println("Loading tab " + tabTitle);
 				driver.executeScript(jsCode);
 				waitLoadSpinner();
 				doc = get();
 			} else {
-				System.out.println("Loading tab " + tabTitle + " (was default)");
 				firstTab = false;
 			}
 			
@@ -125,12 +123,10 @@ public class SeleniumChromeProvider implements AutoCloseable {
 				if (!firstSubTab) {
 					subtabTitle = subtab.attr("title");
 					String jsCode = subtab.attr("onmousedown");
-					System.out.println("Loading subtab " + tabTitle + " > " + subtabTitle);
 					driver.executeScript(jsCode);
 					waitLoadSpinner();
 					doc = get();
 				} else {
-					System.out.println("Loading subtab " + tabTitle + " > " + subtabTitle + " (was default)");
 					firstSubTab = false;
 				}
 				
@@ -168,7 +164,6 @@ public class SeleniumChromeProvider implements AutoCloseable {
 	
 	public Document get(String url) {
 		if (url != null) {
-			System.out.println("Getting " + url + "...");
 			driver.get(url);
 		}
 		waitJs();

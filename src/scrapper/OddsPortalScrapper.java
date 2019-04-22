@@ -259,9 +259,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 					sectionEntry.getValue().second.stream().map(
 							s -> s == null ? null : Jsoup.parse(s)).collect(Collectors.toList()
 					);
-			
-			System.out.println("Parsing " + section + " ...");
-			
+					
 			Elements oddTables = doc.select("div#odds-data-table div.table-container");
 			if (oddTables.isEmpty()) {
 				logError(new ScrapException("Could not locate any oddTable, " + section +", " + m, doc));
