@@ -13,6 +13,14 @@ public class Utils {
 		                                TimeZone.getDefault().toZoneId());
 	}
 	
+	public static Double tryParseDouble(String s) {
+		try {
+			return Double.parseDouble(s);
+		} catch (NumberFormatException e) {
+			return null;
+		}
+	}
+	
 	public static double parseDoubleEmptyIsZero(String s) throws NumberFormatException {
 		if (s.trim().isEmpty())
 			return 0d;

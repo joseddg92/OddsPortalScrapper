@@ -1,5 +1,6 @@
 package htmlProvider;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -13,17 +14,20 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.ui.ExpectedCondition;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 import model.ScrapException;
 import model.WebSection;
+import util.Pair;
 
 public class SeleniumChromeProvider implements AutoCloseable {
 
@@ -71,9 +75,9 @@ public class SeleniumChromeProvider implements AutoCloseable {
 		driver.manage().timeouts().pageLoadTimeout(loadTimeout, TimeUnit.SECONDS);
 	}	
 	
-	public Map<WebSection, Document> getAllTabs(String url) throws ScrapException {
+	public Map<WebSection, Pair<Document, List<String>>> getAllTabs(String url) throws ScrapException {
 		// Use LinkedHashMap as it could be important to keep the original tab order
-		Map<WebSection, Document> docPerTab = new LinkedHashMap<>();
+		Map<WebSection, Pair<Document, List<String>>> docPerTab = new LinkedHashMap<>();
 
 		Document doc = get(url);
 		Elements tabs = doc.select("div#bettype-tabs li a");
@@ -133,8 +137,24 @@ public class SeleniumChromeProvider implements AutoCloseable {
 				for (Element rowToBeExpanded : doc.select("#odds-data-table > div > div > strong > a"))
 					driver.executeScript(rowToBeExpanded.attr("onclick"));
 				
+				
+				List<WebElement> oddElements = driver.findElementsByCssSelector(
+						"div#odds-data-table div.table-container:not(.exchangeContainer) table > tbody > tr td.odds"
+				);
+				List<String> htmlOddHistoryFragments = new ArrayList<>(oddElements.size());
+				for (WebElement oddElement : oddElements) {
+					new Actions(driver).moveToElement(oddElement).perform();
+					waitJs();
+					try {
+						htmlOddHistoryFragments.add(driver.findElementById("tooltipdiv").getAttribute("outerHTML"));
+					} catch (NoSuchElementException e) {
+						/* Add a null history to keep the rest aligned */
+						htmlOddHistoryFragments.add(null);
+					}
+				}
+				
 				doc = get();
-				docPerTab.put(new WebSection(tabTitle, subtabTitle), doc);
+				docPerTab.put(new WebSection(tabTitle, subtabTitle), Pair.create(doc, htmlOddHistoryFragments));
 			}
 		}
 		

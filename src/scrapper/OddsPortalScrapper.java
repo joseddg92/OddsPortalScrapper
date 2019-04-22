@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -12,8 +13,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.nodes.Node;
+import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
 import org.openqa.selenium.NoSuchElementException;
 
@@ -27,6 +31,8 @@ import model.Notifiable;
 import model.ScrapException;
 import model.Sport;
 import model.WebSection;
+import util.Pair;
+import util.StringDate;
 import util.Utils;
 
 public class OddsPortalScrapper implements AutoCloseable {
@@ -179,8 +185,38 @@ public class OddsPortalScrapper implements AutoCloseable {
 		}
 	}
 
+	private static Map<StringDate, Double> parseOddHistory(Element element) {
+		Map<StringDate, Double> map = new LinkedHashMap<>();
+		if (element == null)
+			return map;
+
+		Element textElement = element.selectFirst("#tooltiptext");
+		String previous = null;
+		for (Node node : textElement.childNodes()) {
+			String text;
+			if (node instanceof TextNode)
+				text = ((TextNode) node).text().trim();
+			else if (node instanceof Element)
+				text = ((Element) node).text().trim();
+			else 
+				continue;
+			if (text.isEmpty())
+				continue;
+			if (Utils.tryParseDouble(text) != null && (text.startsWith("+") || text.startsWith("-")))
+				continue;
+			
+			Double odd = Utils.tryParseDouble(text);
+			if (odd != null && previous != null)
+				map.put(new StringDate(previous), odd);
+			
+			previous = text;
+		}
+		
+		return map;
+	}
+	
 	public void parse(Match m) {
-		Map<WebSection, Document> tabs; 
+		Map<WebSection, Pair<Document, List<String>>> tabs; 
 		try {
 			tabs = htmlProvider.getAllTabs(m.url);
 		} catch (ScrapException e) {
@@ -193,13 +229,13 @@ public class OddsPortalScrapper implements AutoCloseable {
 			return;
 		}
 
-		Document firstTab = tabs.values().iterator().next();
+		Document firstTab = tabs.values().iterator().next().first;
 		Element dateElement = firstTab.selectFirst("p.date");
 		if (dateElement == null) {
 			logError(new ScrapException("Could not find match time! " + m, firstTab));
 			return;
 		}
-		
+
 		final Pattern dateClassPattern = Pattern.compile("t([0-9]+)-");
 		Matcher matcher = dateClassPattern.matcher(dateElement.attr("class"));
 		if (!matcher.find() || matcher.groupCount() > 1) {
@@ -216,9 +252,13 @@ public class OddsPortalScrapper implements AutoCloseable {
 		
 		final MatchData matchData = new MatchData(m, dateTimestamp);
 		
-		for (Entry<WebSection, Document> sectionEntry : tabs.entrySet()) {
+		for (Entry<WebSection, Pair<Document, List<String>>> sectionEntry : tabs.entrySet()) {
 			final WebSection section = sectionEntry.getKey();
-			final Document doc = sectionEntry.getValue();
+			final Document doc = sectionEntry.getValue().first;
+			final List<Element> htmlOddHistoryFragmentsList = 
+					sectionEntry.getValue().second.stream().map(
+							s -> s == null ? null : Jsoup.parse(s)).collect(Collectors.toList()
+					);
 			
 			System.out.println("Parsing " + section + " ...");
 			
@@ -244,33 +284,23 @@ public class OddsPortalScrapper implements AutoCloseable {
 				}
 				
 				List<String> columns = headerRow.select("tr a").stream().map(e -> e.text()).collect(Collectors.toList());
-				int nColumns = columns.size();
 				
 				/* Check first and last columns are as expected, and remove them */
 				String firstColumn = columns.get(0);
-				String lastColumn = columns.get(nColumns - 1);
+				String lastColumn = columns.get(columns.size() - 1);
 				if (!firstColumn.trim().equals("Bookmakers")) {
 					logError(new ScrapException("Strange first column: " + columns.get(0), headerRow));
 					continue;
 				} else {
 					columns.remove(firstColumn);
-					nColumns--;
 				}
 				if (lastColumn.trim().equals("Payout")) {
 					columns.remove(lastColumn);
-					nColumns--;
 				}
-				
-				
-				System.out.println("\t" + section + " --> " + columns);
-				
-				
+
 				Elements rows = oddTable.select("table > tbody > tr");
 
-				int i=0;
 				for (Element row : rows) {
-					i++;
-					List<Double> odds = new ArrayList<>();
 					Elements oddElements = row.select("td.odds");
 					
 					if (oddElements.isEmpty())
@@ -279,31 +309,43 @@ public class OddsPortalScrapper implements AutoCloseable {
 					/* For now assume first column to be the bethouse */
 					Element bethouseElement = row.child(0);
 					String betHouse = Utils.combineAllText(bethouseElement.select("a"));
-					final OddKey key = new OddKey(section, oddTableTitle, betHouse);
-
-					for (Element oddElement : oddElements) {
-						double odd = 0;
-						try {
-							odd = Utils.parseDoubleEmptyIsZero(Utils.combineAllText(oddElement.children()));
-						} catch (NumberFormatException e) {
-							logError(new ScrapException(m + ", " + section + " strange odd cell does not have an odd", row, e));
-						} finally {
-							/* Even if parsing fails, we need to add it to keep the rest of indexes */
-							odds.add(odd);
-						}
-					}
 					
-					if (odds.size() != nColumns) {
-						logError(new ScrapException("Strange number of odds, expected: " + columns + " only got: " + odds, row));
+					if (oddElements.size() != columns.size()) {
+						logError(new ScrapException("Strange number of odds, expected: " + columns + " only got: " + oddElements.size(), row));
 						continue;
 					}
-					
-					if (!matchData.addOdd(key, columns, odds))
-						logError(new ScrapException("Could not insert odds: " + columns + " -> " + odds, row));
-					
-					System.out.println("\t" + "\t" + "Section "  + oddTableTitle + ", Row " + i + ", bethouse: " + betHouse + ", odds: " + odds);
+	
+					for (int i = 0; i < oddElements.size(); i++) {
+						Element oddElement = oddElements.get(i);
+						String column = columns.get(i);
+						/* Some times there's a nested <a> element with a link to the bethouse */
+						Element aElement = oddElement.selectFirst("a");
+						oddElement = aElement != null ? aElement : oddElement;
+						double odd = 0;
+						try {
+							odd = Utils.parseDoubleEmptyIsZero(oddElement.text());
+						} catch (NumberFormatException e) {
+							logError(new ScrapException(m + ", " + section + " strange odd cell does not have an odd", row, e));
+						}
+						
+						final OddKey key = new OddKey(section, oddTableTitle, betHouse, column);
+						Map<StringDate, Double> oddsForKey;
+						try {
+							oddsForKey = parseOddHistory(htmlOddHistoryFragmentsList.remove(0));
+						} catch (IndexOutOfBoundsException e) {
+							logError(new ScrapException("htmlOddHistoryFragments was short", doc));
+							/* At least used the parsed odd with current timestamp */
+							oddsForKey = new LinkedHashMap<>(1);
+							oddsForKey.put(new StringDate(System.currentTimeMillis()), odd);
+						}
+						
+						matchData.addOdds(key, oddsForKey);
+					}
 				}
 			}
+			
+			if (!htmlOddHistoryFragmentsList.isEmpty())
+				logError(new ScrapException("Extra fragments...", doc));
 		}
 		
 		fireEventCheckStop(matchData);
