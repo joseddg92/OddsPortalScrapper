@@ -13,9 +13,28 @@ public class Match implements Notifiable {
 		this.name = name;
 		this.url = url;
 	}
+	
+	public String getLocalTeam() {
+		String parts[] = name.split(" - ");
+		return parts[0];
+	}
+	
+	public String getVisitorTeam() {
+		String parts[] = name.split(" - ");
+		return parts.length > 1 ? parts[1] : null;
+	}
+	
+	public String getKey() {
+		int beginIndex = url.lastIndexOf("-");
+		int endIndex = url.lastIndexOf("/");
+		if (endIndex < beginIndex)
+			endIndex = url.length();
+
+		return url.substring(beginIndex + 1, endIndex);
+	}
 
 	public String toString() {
-		return "Match[" + league + "/" + name + "]";
+		return "Match<" + getKey() + ">[" + league + "/" + name + "]";
 	}
 	
 	public boolean notify(ParserListener listener) {
