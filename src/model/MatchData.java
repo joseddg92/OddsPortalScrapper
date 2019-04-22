@@ -1,7 +1,6 @@
 package model;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -47,7 +46,7 @@ public class MatchData implements Notifiable {
 	final public Match match;
 	final public long beginTimeStamp;
 	/* e.g. {WebSection[AH, 1st Half], -1.5, 888Sport} -> [1 (meaning +) -> 8.2, 2 (meaning -) -> 1.08] */
-	private Map<OddKey, Map<StringDate, Double>> odds = new HashMap<>(); 
+	private Map<OddKey, Map<StringDate, Double>> odds = new LinkedHashMap<>(); 
 		
 	public MatchData(Match match, long beginTimeStamp) {
 		this.match = match;
