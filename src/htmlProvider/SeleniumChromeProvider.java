@@ -32,6 +32,7 @@ import util.Pair;
 public class SeleniumChromeProvider implements AutoCloseable {
 
 	private static final int DEFAULT_WEBLOAD_TIMEOUT_SEC = 60;
+	private static final int POLL_WAIT_INTERNAL = 50;
 	private static final Function<? super WebDriver, Boolean> jsReadyCondition =
 			(ExpectedCondition<Boolean>) wd -> ((JavascriptExecutor) wd).executeScript("return document.readyState").equals("complete");
 	
@@ -209,7 +210,7 @@ public class SeleniumChromeProvider implements AutoCloseable {
 	}
 	
 	private void waitJs() {
-		new WebDriverWait(driver, loadTimeout).until(jsReadyCondition);
+		new WebDriverWait(driver, loadTimeout, POLL_WAIT_INTERNAL).until(jsReadyCondition);
 	}
 	
 	private void waitLoadSpinner() {
@@ -219,11 +220,11 @@ public class SeleniumChromeProvider implements AutoCloseable {
 		 * we didn't give it time to appear.
 		 */
 		try {
-			new WebDriverWait(driver, 1).until(ExpectedConditions.visibilityOfElementLocated(By.id("event-wait-msg-main")));
+			new WebDriverWait(driver, 1, POLL_WAIT_INTERNAL).until(ExpectedConditions.visibilityOfElementLocated(By.id("event-wait-msg-main")));
 		} catch (TimeoutException e) {}
 		
 		try {
-			new WebDriverWait(driver, loadTimeout).until(ExpectedConditions.invisibilityOfElementLocated(By.id("event-wait-msg-main")));
+			new WebDriverWait(driver, loadTimeout, POLL_WAIT_INTERNAL).until(ExpectedConditions.invisibilityOfElementLocated(By.id("event-wait-msg-main")));
 		} catch (TimeoutException e) {}
 		
 		/* After the spinner has disappeared, js is changing the DOM, so wait for it to finish */
