@@ -75,7 +75,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 		return !keepGoing;
 	}
 	
-	public void findSports() throws ScrapException {
+	public void findSports() {
 		Document startPage = htmlProvider.get(ENTRY_URL);
 		Elements tabs = startPage.select("div#tabdiv_sport_main li.tab");
 		

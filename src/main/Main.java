@@ -78,13 +78,7 @@ public class Main {
 		scrapper.registerListener(listener);
 
 		long timeStart = System.currentTimeMillis();
-
-		try {
-			scrapper.findSports();
-		} catch (ScrapException e) {
-			e.printStackTrace();
-		}
-		
+		scrapper.findSports();
 		long timeEnd = System.currentTimeMillis();
 		
 		System.out.format("It took %d ms to parse %d matches (%.2f matches/sec)\n", timeEnd - timeStart, matches.size(), matches.size() / (double) ((timeEnd- timeStart)) / 1000);
