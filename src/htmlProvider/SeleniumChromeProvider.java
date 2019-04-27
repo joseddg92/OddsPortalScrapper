@@ -8,7 +8,6 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
@@ -26,6 +25,7 @@ import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 import model.ScrapException;
+import model.WebData;
 import model.WebSection;
 import util.Pair;
 
@@ -80,14 +80,14 @@ public class SeleniumChromeProvider implements AutoCloseable {
 		// Use LinkedHashMap as it could be important to keep the original tab order
 		Map<WebSection, Pair<Document, List<String>>> docPerTab = new LinkedHashMap<>();
 
-		Document doc = get(url);
-		Elements tabs = doc.select("div#bettype-tabs li a");
+		WebData webData = get(url);
+		Elements tabs = webData.getDoc().select("div#bettype-tabs li a");
 		/* The tab that is selected by default is the current element and does not have
 		 * a <a> element, so manually append it. */
-		Element activeTab = doc.selectFirst("div#bettype-tabs li.active strong span");
+		Element activeTab = webData.getDoc().selectFirst("div#bettype-tabs li.active strong span");
 		if (activeTab == null) {
 			if (tabs.size() != 0)
-				throw new ScrapException("tabs != 0 but no active tab", doc);
+				throw new ScrapException("tabs != 0 but no active tab", webData.getDoc());
 			return docPerTab;
 		}
 		
@@ -107,13 +107,13 @@ public class SeleniumChromeProvider implements AutoCloseable {
 				String jsCode = tab.attr("onmousedown");
 				driver.executeScript(jsCode);
 				waitLoadSpinner();
-				doc = get();
+				webData = get();
 			} else {
 				firstTab = false;
 			}
 			
-			Elements subtabs = doc.select("div#bettype-tabs-scope ul[style=\"display: block;\"] li a");
-			Element activeSubtab = doc.selectFirst("div#bettype-tabs-scope ul[style=\"display: block;\"] li.active strong span");
+			Elements subtabs = webData.getDoc().select("div#bettype-tabs-scope ul[style=\"display: block;\"] li a");
+			Element activeSubtab = webData.getDoc().selectFirst("div#bettype-tabs-scope ul[style=\"display: block;\"] li.active strong span");
 			if (activeSubtab == null)
 				continue;
 			String subtabTitle = activeSubtab.text();
@@ -125,13 +125,13 @@ public class SeleniumChromeProvider implements AutoCloseable {
 					String jsCode = subtab.attr("onmousedown");
 					driver.executeScript(jsCode);
 					waitLoadSpinner();
-					doc = get();
+					webData = get();
 				} else {
 					firstSubTab = false;
 				}
 				
 				/* Expand all bet groups by 'clicking' on them */
-				for (Element rowToBeExpanded : doc.select("#odds-data-table > div > div > strong > a"))
+				for (Element rowToBeExpanded : webData.getDoc().select("#odds-data-table > div > div > strong > a"))
 					driver.executeScript(rowToBeExpanded.attr("onclick"));
 				
 				
@@ -150,32 +150,33 @@ public class SeleniumChromeProvider implements AutoCloseable {
 					}
 				}
 				
-				doc = get();
-				docPerTab.put(new WebSection(tabTitle, subtabTitle), Pair.create(doc, htmlOddHistoryFragments));
+				webData = get();
+				final WebSection section = new WebSection(tabTitle, subtabTitle);
+				docPerTab.put(section, Pair.create(webData.getDoc(), htmlOddHistoryFragments));
 			}
 		}
 		
 		return docPerTab;
 	}
 	
-	public Document get() {
+	public WebData get() {
 		return get(null);
 	}
 	
-	public Document get(String url) {
+	public WebData get(String url) {
 		if (url != null) {
 			driver.get(url);
 		}
 		waitJs();
-		Document doc = Jsoup.parse(driver.getPageSource(), driver.getCurrentUrl());
+		WebData webData = WebData.fromDriver(driver);
 		
-		if (!isLoggedIn(doc)) {
+		if (!isLoggedIn(webData.getDoc())) {
 			System.out.println("Not logged in, login in...");
 			logIn();
 			return get(url);
 		}
 		
-		return doc;
+		return webData;
 	}
 	
 	@Override

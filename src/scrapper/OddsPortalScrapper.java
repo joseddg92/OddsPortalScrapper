@@ -76,7 +76,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 	}
 	
 	public void findSports() {
-		Document startPage = htmlProvider.get(ENTRY_URL);
+		Document startPage = htmlProvider.get(ENTRY_URL).getDoc();
 		Elements tabs = startPage.select("div#tabdiv_sport_main li.tab");
 		
 		for (Element tab : tabs) {	
@@ -96,7 +96,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 	
 	public void parse(Sport sport) {
 		htmlProvider.get("http://www.google.es");
-		Document doc = htmlProvider.get(String.format(SPORT_URL_FORMAT, sport.name));
+		Document doc = htmlProvider.get(String.format(SPORT_URL_FORMAT, sport.name)).getDoc();
 		
 		Elements rows = doc.select("table[style=\"display: table;\"] tbody > tr");
 		if (rows.isEmpty()) {
@@ -151,7 +151,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 	}
 	
 	public void parse(League league) {
-		Document doc = htmlProvider.get(BASE_URL + league.relUrl);
+		Document doc = htmlProvider.get(BASE_URL + league.relUrl).getDoc();
 		
 		Elements rows = doc.select("table[style] tbody > tr");
 		if (rows.isEmpty()) {
