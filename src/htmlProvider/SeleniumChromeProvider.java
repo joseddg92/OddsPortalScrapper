@@ -133,8 +133,7 @@ public class SeleniumChromeProvider implements AutoCloseable {
 				/* Expand all bet groups by 'clicking' on them */
 				for (Element rowToBeExpanded : webData.getDoc().select("#odds-data-table > div > div > strong > a"))
 					driver.executeScript(rowToBeExpanded.attr("onclick"));
-				
-				
+
 				List<WebElement> oddElements = driver.findElementsByCssSelector(
 						"div#odds-data-table div.table-container:not(.exchangeContainer) table > tbody > tr td.odds"
 				);
@@ -198,7 +197,7 @@ public class SeleniumChromeProvider implements AutoCloseable {
 	}
 	
 	private boolean isLoggedIn(Document doc) {
-		/* Assume logged for pages othe than oddsportal.com */
+		/* Assume logged for pages other than oddsportal.com */
 		if (!driver.getCurrentUrl().contains("oddsportal.com"))
 				return true;
 		
