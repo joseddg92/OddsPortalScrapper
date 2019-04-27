@@ -16,6 +16,7 @@
 
 package util;
 
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -23,7 +24,7 @@ import java.util.Objects;
  * implementation of equals(), returning true if equals() is true on each of the contained
  * objects.
  */
-public class Pair<F, S> {
+public class Pair<F, S> implements Map.Entry<F, S> {
     public final F first;
     public final S second;
     /**
@@ -74,4 +75,16 @@ public class Pair<F, S> {
     public static <A, B> Pair <A, B> create(A a, B b) {
         return new Pair<A, B>(a, b);
     }
+	@Override
+	public F getKey() {
+		return first;
+	}
+	@Override
+	public S getValue() {
+		return second;
+	}
+	@Override
+	public S setValue(S value) {
+		throw new UnsupportedOperationException("Inmutable pair, value cannot be modified");
+	}
 }
