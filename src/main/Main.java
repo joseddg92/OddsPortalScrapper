@@ -1,7 +1,9 @@
 package main;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
@@ -39,12 +41,23 @@ public class Main {
 				nErrors++;
 
 				System.err.println("Error logged: " + error.getMessage());
-				String reportName = String.format("%s_%d.log", runStartDate, nErrors);
+				final String reportName = String.format("%s_%d.log", runStartDate, nErrors);
 				try (PrintWriter writer = new PrintWriter(new File(ERROR_REPORT_PATH, reportName))) {
 						error.logTo(writer);
 				} catch (IOException e) {
 					System.err.println("Could not log exception.");
 					e.printStackTrace();
+				}
+				
+				final String screenShotName = String.format("%s_%d.png", runStartDate, nErrors);
+				byte[] pngBytes = error.webData == null ? null : error.webData.getScreenShot();
+				if (pngBytes != null) {
+					try (OutputStream stream = new FileOutputStream(new File(ERROR_REPORT_PATH, screenShotName))) {
+						stream.write(pngBytes);
+					} catch (IOException e) {
+						System.err.println("Could not log exception screenshot.");
+						e.printStackTrace();
+					}
 				}
 			}
 			

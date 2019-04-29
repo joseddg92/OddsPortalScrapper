@@ -30,6 +30,7 @@ import model.MatchData.OddKey;
 import model.Notifiable;
 import model.ScrapException;
 import model.Sport;
+import model.WebData;
 import model.WebSection;
 import util.Pair;
 import util.StringDate;
@@ -76,7 +77,8 @@ public class OddsPortalScrapper implements AutoCloseable {
 	}
 	
 	public void findSports() {
-		Document startPage = htmlProvider.get(ENTRY_URL).getDoc();
+		final WebData webData = htmlProvider.get(ENTRY_URL);
+		final Document startPage = webData.getDoc();
 		Elements tabs = startPage.select("div#tabdiv_sport_main li.tab");
 		
 		for (Element tab : tabs) {	
@@ -89,18 +91,19 @@ public class OddsPortalScrapper implements AutoCloseable {
 				if (fireEventCheckStop(sport))
 					return;
 			} else {
-				logError(new ScrapException("Parsing a sport tab 'onclick' attribute, the regex did not match: " + onClickAttr, tab));
+				logError(new ScrapException("Parsing a sport tab 'onclick' attribute, the regex did not match: " + onClickAttr, webData, tab));
 			}
 		}
 	}
 	
 	public void parse(Sport sport) {
 		htmlProvider.get("http://www.google.es");
-		Document doc = htmlProvider.get(String.format(SPORT_URL_FORMAT, sport.name)).getDoc();
+		final WebData webData = htmlProvider.get(String.format(SPORT_URL_FORMAT, sport.name));
+		final Document doc = webData.getDoc();
 		
 		Elements rows = doc.select("table[style=\"display: table;\"] tbody > tr");
 		if (rows.isEmpty()) {
-			logError(new ScrapException("Sport " + sport +  " contained no rows"));
+			logError(new ScrapException("Sport " + sport +  " contained no rows", webData));
 			return;
 		}
 		
@@ -115,7 +118,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 				try {
 					countryName = row.select("a.bfl").text();
 				} catch (NoSuchElementException e) {
-					logError(new ScrapException("Center-row did not contain a 'bfl' child to get name", row));
+					logError(new ScrapException("Center-row did not contain a 'bfl' child to get name", webData, row));
 				}
 			}
 			
@@ -138,7 +141,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 					continue;
 				
 				if (relativeUrl.trim().isEmpty()) {
-					logError(new ScrapException("League with empty link", tdElement));
+					logError(new ScrapException("League with empty link", webData, tdElement));
 					continue;
 				}
 				
@@ -151,11 +154,12 @@ public class OddsPortalScrapper implements AutoCloseable {
 	}
 	
 	public void parse(League league) {
-		Document doc = htmlProvider.get(BASE_URL + league.relUrl).getDoc();
+		final WebData webData = htmlProvider.get(BASE_URL + league.relUrl);
+		final Document doc = webData.getDoc();
 		
 		Elements rows = doc.select("table[style] tbody > tr");
 		if (rows.isEmpty()) {
-			logError(new ScrapException("League " + league +  " contained no rows"));
+			logError(new ScrapException("League " + league +  " contained no rows", webData));
 			return;
 		}
 		
@@ -217,7 +221,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 	}
 	
 	public void parse(Match m) {
-		Map<WebSection, Pair<Document, List<String>>> tabs; 
+		Map<WebSection, Pair<WebData, List<String>>> tabs; 
 		try {
 			tabs = htmlProvider.getAllTabs(m.url);
 		} catch (ScrapException e) {
@@ -230,32 +234,34 @@ public class OddsPortalScrapper implements AutoCloseable {
 			return;
 		}
 
-		Document firstTab = tabs.values().iterator().next().first;
+		final WebData firstWebData = tabs.values().iterator().next().first;
+		final Document firstTab = firstWebData.getDoc();
 		Element dateElement = firstTab.selectFirst("p.date");
 		if (dateElement == null) {
-			logError(new ScrapException("Could not find match time! " + m, firstTab));
+			logError(new ScrapException("Could not find match time! " + m, firstWebData));
 			return;
 		}
 
 		final Pattern dateClassPattern = Pattern.compile("t([0-9]+)-");
 		Matcher matcher = dateClassPattern.matcher(dateElement.attr("class"));
 		if (!matcher.find() || matcher.groupCount() > 1) {
-			logError(new ScrapException("Could not parse time: " + dateElement.attr("class") + "," + m, firstTab));
+			logError(new ScrapException("Could not parse time: " + dateElement.attr("class") + "," + m, firstWebData, firstTab));
 			return;
 		}
 		long dateTimestamp;
 		try {
 			dateTimestamp = Long.parseLong(matcher.group(1));
 		} catch (NumberFormatException e) {
-			logError(new ScrapException("Could not parse time: " + dateElement.attr("class") + "," + m, firstTab, e));
+			logError(new ScrapException("Could not parse time: " + dateElement.attr("class") + "," + m, firstWebData, firstTab, e));
 			return;
 		}
 		
 		final MatchData matchData = new MatchData(m, dateTimestamp);
 		
-		for (Entry<WebSection, Pair<Document, List<String>>> sectionEntry : tabs.entrySet()) {
+		for (Entry<WebSection, Pair<WebData, List<String>>> sectionEntry : tabs.entrySet()) {
 			final WebSection section = sectionEntry.getKey();
-			final Document doc = sectionEntry.getValue().first;
+			final WebData webData = sectionEntry.getValue().first;
+			final Document doc = webData.getDoc();
 			final List<Element> htmlOddHistoryFragmentsList = 
 					sectionEntry.getValue().second.stream().map(
 							s -> s == null ? null : Jsoup.parse(s)).collect(Collectors.toList()
@@ -263,7 +269,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 					
 			Elements oddTables = doc.select("div#odds-data-table div.table-container");
 			if (oddTables.isEmpty()) {
-				logError(new ScrapException("Could not locate any oddTable, " + section +", " + m, doc));
+				logError(new ScrapException("Could not locate any oddTable, " + section +", " + m, webData, doc));
 				return;
 			}
 			
@@ -278,7 +284,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 				
 				Element headerRow = oddTable.selectFirst("thead > tr");
 				if (headerRow == null) {
-					logError(new ScrapException("No header row while parsing " + section + "in " + m, doc));
+					logError(new ScrapException("No header row while parsing " + section + "in " + m, webData, doc));
 					return;
 				}
 				
@@ -288,7 +294,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 				String firstColumn = columns.get(0);
 				String lastColumn = columns.get(columns.size() - 1);
 				if (!firstColumn.trim().equals("Bookmakers")) {
-					logError(new ScrapException("Strange first column: " + columns.get(0), headerRow));
+					logError(new ScrapException("Strange first column: " + columns.get(0), webData, headerRow));
 					continue;
 				} else {
 					columns.remove(firstColumn);
@@ -310,7 +316,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 					String betHouse = Utils.combineAllText(bethouseElement.select("a"));
 					
 					if (oddElements.size() != columns.size()) {
-						logError(new ScrapException("Strange number of odds, expected: " + columns + " only got: " + oddElements.size(), row));
+						logError(new ScrapException("Strange number of odds, expected: " + columns + " only got: " + oddElements.size(), webData, row));
 						continue;
 					}
 	
@@ -324,7 +330,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 						try {
 							odd = Utils.parseDoubleEmptyIsZero(oddElement.text());
 						} catch (NumberFormatException e) {
-							logError(new ScrapException(m + ", " + section + " strange odd cell does not have an odd", row, e));
+							logError(new ScrapException(m + ", " + section + " strange odd cell does not have an odd", webData, row, e));
 						}
 						
 						final OddKey key = new OddKey(section, oddTableTitle, betHouse, column);
@@ -332,7 +338,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 						try {
 							oddsForKey = parseOddHistory(htmlOddHistoryFragmentsList.remove(0));
 						} catch (IndexOutOfBoundsException e) {
-							logError(new ScrapException("htmlOddHistoryFragments was short", doc));
+							logError(new ScrapException("htmlOddHistoryFragments was short", webData, doc));
 							/* At least used the parsed odd with current timestamp */
 							oddsForKey = new LinkedHashMap<>(1);
 							oddsForKey.put(new StringDate(System.currentTimeMillis()), odd);
@@ -344,7 +350,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 			}
 			
 			if (!htmlOddHistoryFragmentsList.isEmpty())
-				logError(new ScrapException("Extra fragments...", doc));
+				logError(new ScrapException("Extra fragments...", webData, doc));
 		}
 		
 		fireEventCheckStop(matchData);

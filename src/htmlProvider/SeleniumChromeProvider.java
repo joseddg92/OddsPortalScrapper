@@ -76,9 +76,9 @@ public class SeleniumChromeProvider implements AutoCloseable {
 		driver.manage().timeouts().pageLoadTimeout(loadTimeout, TimeUnit.SECONDS);
 	}	
 	
-	public Map<WebSection, Pair<Document, List<String>>> getAllTabs(String url) throws ScrapException {
+	public Map<WebSection, Pair<WebData, List<String>>> getAllTabs(String url) throws ScrapException {
 		// Use LinkedHashMap as it could be important to keep the original tab order
-		Map<WebSection, Pair<Document, List<String>>> docPerTab = new LinkedHashMap<>();
+		Map<WebSection, Pair<WebData, List<String>>> docPerTab = new LinkedHashMap<>();
 
 		WebData webData = get(url);
 		Elements tabs = webData.getDoc().select("div#bettype-tabs li a");
@@ -87,7 +87,7 @@ public class SeleniumChromeProvider implements AutoCloseable {
 		Element activeTab = webData.getDoc().selectFirst("div#bettype-tabs li.active strong span");
 		if (activeTab == null) {
 			if (tabs.size() != 0)
-				throw new ScrapException("tabs != 0 but no active tab", webData.getDoc());
+				throw new ScrapException("tabs != 0 but no active tab", webData);
 			return docPerTab;
 		}
 		
@@ -151,7 +151,7 @@ public class SeleniumChromeProvider implements AutoCloseable {
 				
 				webData = get();
 				final WebSection section = new WebSection(tabTitle, subtabTitle);
-				docPerTab.put(section, Pair.create(webData.getDoc(), htmlOddHistoryFragments));
+				docPerTab.put(section, Pair.create(webData, htmlOddHistoryFragments));
 			}
 		}
 		

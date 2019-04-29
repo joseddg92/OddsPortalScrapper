@@ -8,18 +8,24 @@ public class ScrapException extends Exception {
 
 	private static final long serialVersionUID = 7736898556227276127L;
 	public final Element element;
+	public final WebData webData;
 	
 	public ScrapException(String reason) {
-		this(reason, null);	
+		this(reason, null, null);
 	}
 	
-	public ScrapException(String reason, Element we) {
-		this(reason, we, null);
+	public ScrapException(String reason, WebData webData) {
+		this(reason, webData, null);
 	}
 	
-	public ScrapException(String reason, Element we, Exception e) {
+	public ScrapException(String reason, WebData webdata, Element element) {
+		this(reason, webdata, element, null);
+	}
+	
+	public ScrapException(String reason, WebData webdata, Element element, Exception e) {
 		super(reason, e);
-		this.element = we;
+		this.element = element != null ? element : (webdata != null ? webdata.getDoc() : null);
+		this.webData = webdata;
 	}
 	
 	public void logTo(PrintWriter out) throws IOException {
