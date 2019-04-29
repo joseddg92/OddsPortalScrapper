@@ -7,11 +7,13 @@ public class Match implements Notifiable {
 	public final League league;
 	public final String name;
 	public final String url;
+	public final boolean isLive;
 	
-	public Match(League league, String name, String url) {
+	public Match(League league, String name, String url, boolean isLive) {
 		this.league = league;
 		this.name = name;
 		this.url = url;
+		this.isLive = isLive;
 	}
 	
 	public String getLocalTeam() {
@@ -34,7 +36,7 @@ public class Match implements Notifiable {
 	}
 
 	public String toString() {
-		return "Match<" + getKey() + ">[" + league + "/" + name + "]";
+		return "Match<" + getKey() + ">[" + league + "/" + name + (isLive ? " <LIVE!> " : "") + "]";
 	}
 	
 	public boolean notify(ParserListener listener) {

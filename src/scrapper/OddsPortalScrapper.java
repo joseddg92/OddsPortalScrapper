@@ -178,7 +178,8 @@ public class OddsPortalScrapper implements AutoCloseable {
 			
 			String matchName = matchElement.text();
 			String matchUrl = matchElement.attr("href");
-			Match match = new Match(league, matchName, BASE_URL + matchUrl);
+			boolean isLive = matchElement.selectFirst("span.live-odds-ico-prev") != null;
+			Match match = new Match(league, matchName, BASE_URL + matchUrl, isLive);
 			
 			if (fireEventCheckStop(match))
 				return;
