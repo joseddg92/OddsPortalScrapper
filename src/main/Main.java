@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -79,30 +81,31 @@ public class Main {
 		
 		scrapper.registerListener(listener);
 
-		long timeStart = System.currentTimeMillis();
+		Instant timeStart = Instant.now();
 		scrapper.findSports();
-		long timeEnd = System.currentTimeMillis();
+		Duration processTime = Duration.between(timeStart, Instant.now());
 		
 		System.out.format(
-				"It took %d ms to find %d live matches matches (%.2f matches/sec)\n", 
-				timeEnd - timeStart, 
+				"It took %s to find %d live matches matches (%.2f matches/sec)\n", 
+				processTime, 
 				liveMatches.size(), 
-				liveMatches.size() / (double) ((timeEnd- timeStart)) / 1000
+				(double) liveMatches.size() / processTime.getSeconds()
 		);
 		
 				
-		timeStart = System.currentTimeMillis();
+		timeStart = Instant.now();
 		for (int i = 0; i < liveMatches.size(); i++) {
 			final Match match = liveMatches.get(i);
 			System.out.println(i + 1 + "/" + liveMatches.size() + "...");
 			scrapper.parse(match);
 		}
-		timeEnd = System.currentTimeMillis();
+		processTime = Duration.between(timeStart, Instant.now());
+		
 		System.out.format(
-				"It took %d ms to load %d matches (%.2f sec/match)\n", 
-				timeEnd - timeStart, 
+				"It took %s to load %d matches (%.2f sec/match)\n", 
+				processTime, 
 				liveMatches.size(), 
-				(timeEnd- timeStart) / (1000d * (double) liveMatches.size())
+				(double) processTime.getSeconds() / liveMatches.size()
 		);
 	}
 	
