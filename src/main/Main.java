@@ -26,7 +26,7 @@ public class Main {
 		
 	private static void parseMatches(DDBBManager ddbbManager, OddsPortalScrapper scrapper) {
 		final String runStartDate = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date());
-		final List<Match> matches = new ArrayList<>();
+		final List<Match> liveMatches = new ArrayList<>();
 		
 		final ParserListener listener = new ParserListener() {
 
@@ -48,7 +48,8 @@ public class Main {
 			
 			@Override
 			public boolean onElementParsed(Match match) {
-				matches.add(match);
+				if (match.isLive)
+					liveMatches.add(match);
 				return true;
 			}
 			
@@ -82,16 +83,27 @@ public class Main {
 		scrapper.findSports();
 		long timeEnd = System.currentTimeMillis();
 		
-		System.out.format("It took %d ms to parse %d matches (%.2f matches/sec)\n", timeEnd - timeStart, matches.size(), matches.size() / (double) ((timeEnd- timeStart)) / 1000);
+		System.out.format(
+				"It took %d ms to find %d live matches matches (%.2f matches/sec)\n", 
+				timeEnd - timeStart, 
+				liveMatches.size(), 
+				liveMatches.size() / (double) ((timeEnd- timeStart)) / 1000
+		);
 		
-		int i = 0;
+				
 		timeStart = System.currentTimeMillis();
-		for (Match match : matches) {
-			System.out.println(i++ + "/" + matches.size());
+		for (int i = 0; i < liveMatches.size(); i++) {
+			final Match match = liveMatches.get(i);
+			System.out.println(i + 1 + "/" + liveMatches.size() + "...");
 			scrapper.parse(match);
 		}
 		timeEnd = System.currentTimeMillis();
-		System.out.format("It took %d ms to load %d matches (%.2f sec/match)\n", timeEnd - timeStart, matches.size(), (timeEnd- timeStart) / (1000d * (double) matches.size()));
+		System.out.format(
+				"It took %d ms to load %d matches (%.2f sec/match)\n", 
+				timeEnd - timeStart, 
+				liveMatches.size(), 
+				(timeEnd- timeStart) / (1000d * (double) liveMatches.size())
+		);
 	}
 	
 	public static void main(String[] args) throws Exception {
@@ -102,7 +114,8 @@ public class Main {
 			ddbbManager.ensureDDBBCreated();
 			
 			try (OddsPortalScrapper scrapper = new OddsPortalScrapper()) {
-				parseMatches(ddbbManager, scrapper);
+				while (true)
+					parseMatches(ddbbManager, scrapper);
 			}
 		}
 	}
