@@ -14,7 +14,8 @@ import model.Match;
 import model.MatchData;
 import model.ScrapException;
 import model.Sport;
-import persistence.SQLiteManager;
+import persistence.DDBBManager;
+import persistence.SQLiteManager_v1;
 import scrapper.OddsPortalScrapper;
 import scrapper.ParserListener;
 import util.EclipseTools;
@@ -23,7 +24,7 @@ public class Main {
 
 	private static final String ERROR_REPORT_PATH = "log";
 		
-	private static void parseMatches(SQLiteManager ddbbManager, OddsPortalScrapper scrapper) {
+	private static void parseMatches(DDBBManager ddbbManager, OddsPortalScrapper scrapper) {
 		final String runStartDate = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date());
 		final List<Match> matches = new ArrayList<>();
 		
@@ -97,7 +98,7 @@ public class Main {
 		EclipseTools.fixConsole();
 		System.setProperty("webdriver.chrome.driver", "C:\\chromedriver.exe");
 
-		try (SQLiteManager ddbbManager = new SQLiteManager()) {
+		try (DDBBManager ddbbManager = new SQLiteManager_v1()) {
 			ddbbManager.ensureDDBBCreated();
 			
 			try (OddsPortalScrapper scrapper = new OddsPortalScrapper()) {

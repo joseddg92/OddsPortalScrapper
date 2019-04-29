@@ -23,7 +23,7 @@ import model.MatchData.OddKey;
 import util.StringDate;
 import util.Utils;
 
-public class SQLiteManager implements AutoCloseable {
+public class SQLiteManager_v1 implements DDBBManager {
 
 	private static String DB_FILE_PATH = "odds_v1.db";
 	private static String SQLITE_JDBC_STRING = "jdbc:sqlite:" + DB_FILE_PATH;
@@ -31,7 +31,7 @@ public class SQLiteManager implements AutoCloseable {
 	
 	private static String NEW_LINE_SEPARATOR = System.lineSeparator() + System.lineSeparator();
 	
-	public SQLiteManager() throws ClassNotFoundException {
+	public SQLiteManager_v1() throws ClassNotFoundException {
 		Class.forName("org.sqlite.JDBC");
 	}
 	
