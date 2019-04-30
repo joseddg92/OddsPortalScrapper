@@ -338,7 +338,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 						try {
 							oddsForKey = parseOddHistory(htmlOddHistoryFragmentsList.remove(0));
 						} catch (IndexOutOfBoundsException e) {
-							logError(new ScrapException("htmlOddHistoryFragments was short", webData, doc));
+							logError(new ScrapException("htmlOddHistoryFragments was short (current element " + i + " )", webData, doc));
 							/* At least used the parsed odd with current timestamp */
 							oddsForKey = new LinkedHashMap<>(1);
 							oddsForKey.put(new StringDate(System.currentTimeMillis()), odd);
