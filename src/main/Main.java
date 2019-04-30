@@ -23,6 +23,7 @@ import persistence.SQLiteManager_v1;
 import scrapper.OddsPortalScrapper;
 import scrapper.ParserListener;
 import util.EclipseTools;
+import util.Utils;
 
 public class Main {
 
@@ -100,7 +101,7 @@ public class Main {
 		
 		System.out.format(
 				"It took %s to find %d live matches matches (%.2f matches/sec)\n", 
-				processTime, 
+				Utils.pretty(processTime), 
 				liveMatches.size(), 
 				(double) liveMatches.size() / processTime.getSeconds()
 		);
@@ -109,14 +110,14 @@ public class Main {
 		timeStart = Instant.now();
 		for (int i = 0; i < liveMatches.size(); i++) {
 			final Match match = liveMatches.get(i);
-			System.out.println(i + 1 + "/" + liveMatches.size() + "...");
+			System.out.println("Parsing " + match + " ("+ (i + 1) + "/" + liveMatches.size() + ") ...");
 			scrapper.parse(match);
 		}
 		processTime = Duration.between(timeStart, Instant.now());
 		
 		System.out.format(
 				"It took %s to load %d matches (%.2f sec/match)\n", 
-				processTime, 
+				Utils.pretty(processTime), 
 				liveMatches.size(), 
 				(double) processTime.getSeconds() / liveMatches.size()
 		);

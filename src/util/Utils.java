@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -15,6 +16,14 @@ import java.util.stream.Stream;
 import org.jsoup.nodes.Element;
 
 public class Utils {
+	
+	/* From https://stackoverflow.com/questions/3471397/how-can-i-pretty-print-a-duration-in-java */
+	public static String pretty(Duration duration) {
+		    return duration.toString()
+		            .substring(2)
+		            .replaceAll("(\\d[HMS])(?!$)", "$1 ")
+		            .toLowerCase();
+	}
 	
 	public static <K,V> Stream<Pair<K,V>> zip(List<K> keys, List<V> values) {
 	    return IntStream.range(0, keys.size()).boxed().map(i -> Pair.create(keys.get(i), values.get(i)));
