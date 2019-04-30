@@ -3,8 +3,13 @@ package main;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.io.Serializable;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
@@ -28,7 +33,16 @@ import util.Utils;
 public class Main {
 
 	private static final String ERROR_REPORT_PATH = "log";
+	private static final Path BINDATA_FODLER = Paths.get("bindata");
 		
+	private static void writeToFile(File output, Serializable object) throws IOException {
+		System.out.println("Writing to " + output.getAbsolutePath().toString());
+		output.createNewFile();
+		try (ObjectOutputStream objectOut = new ObjectOutputStream(new FileOutputStream(output))) {
+            objectOut.writeObject(object);
+		}
+	}
+	
 	private static void parseMatches(DDBBManager ddbbManager, OddsPortalScrapper scrapper) {
 		final String runStartDate = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date());
 		final List<Match> liveMatches = new ArrayList<>();
@@ -66,6 +80,7 @@ public class Main {
 			public boolean onElementParsed(Match match) {
 				if (match.isLive)
 					liveMatches.add(match);
+				
 				return true;
 			}
 			
@@ -83,6 +98,13 @@ public class Main {
 
 			@Override
 			public boolean onElementParsed(MatchData data) {
+				System.out.println("onElementParsed(" + data.match + ")");
+				try {
+					writeToFile(Files.createTempFile(BINDATA_FODLER, "matchdata_", ".bin").toFile(), data);
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+				
 				try {
 					ddbbManager.store(data);
 				} catch (SQLException e) {
@@ -126,6 +148,7 @@ public class Main {
 	public static void main(String[] args) throws Exception {
 		EclipseTools.fixConsole();
 		System.setProperty("webdriver.chrome.driver", "C:\\chromedriver.exe");
+		BINDATA_FODLER.toFile().mkdir();
 
 		try (DDBBManager ddbbManager = new SQLiteManager_v1()) {
 			ddbbManager.ensureDDBBCreated();
