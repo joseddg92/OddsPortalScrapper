@@ -1,9 +1,13 @@
 package model;
 
+import java.io.Serializable;
+
 import scrapper.ParserListener;
 
-public class Match implements Notifiable {
+public class Match implements Notifiable, Serializable {
 
+	private static final long serialVersionUID = 1L;
+	
 	public final League league;
 	public final String name;
 	public final String url;

@@ -1,9 +1,12 @@
 package util;
 
+import java.io.Serializable;
 import java.util.Objects;
 
-public class StringDate {
+public class StringDate implements Serializable {
 
+	private static final long serialVersionUID = 1L;
+	
 	private String text;
 	private Long timeStamp;
 	

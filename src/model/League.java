@@ -1,8 +1,12 @@
 package model;
 
+import java.io.Serializable;
+
 import scrapper.ParserListener;
 
-public class League implements Notifiable {
+public class League implements Notifiable, Serializable {
+	
+	private static final long serialVersionUID = 1L;
 	
 	public final Sport sport;
 	public final Country country;

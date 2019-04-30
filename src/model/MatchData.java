@@ -1,5 +1,6 @@
 package model;
 
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -8,9 +9,14 @@ import java.util.Objects;
 import scrapper.ParserListener;
 import util.StringDate;
 
-public class MatchData implements Notifiable {
+public class MatchData implements Notifiable, Serializable {
 
-	public static class OddKey {
+	private static final long serialVersionUID = 1L;
+	
+	public static class OddKey implements Serializable {
+		
+		private static final long serialVersionUID = 1L;
+
 		public final WebSection section;
 		public final String row; /* null for 1X2, not null for AH (e.g. +2.5) */
 		public final String betHouse;

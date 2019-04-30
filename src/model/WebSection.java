@@ -1,9 +1,12 @@
 package model;
 
+import java.io.Serializable;
 import java.util.Objects;
 
-public class WebSection {
+public class WebSection implements Serializable {
 
+	private static final long serialVersionUID = 1L;
+	
 	public final String tab;
 	public final String subtab;
 	
