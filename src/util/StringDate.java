@@ -1,6 +1,11 @@
 package util;
 
 import java.io.Serializable;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
 public class StringDate implements Serializable {
@@ -10,6 +15,9 @@ public class StringDate implements Serializable {
 	private String text;
 	private Long timeStamp;
 	
+	private static List<String> ODDSPORTAL_DATE_FORMATS = Arrays.asList(
+			"dd MMM, hh:mm" /*02 May, 11:47*/
+	);
 	public StringDate(String text) {
 		this.text = text;
 		timeStamp = null;
@@ -47,6 +55,20 @@ public class StringDate implements Serializable {
 	}
 	
 	private void tryParse() {
-		// TODO
+		List<ParseException> exceptions = new ArrayList<>(ODDSPORTAL_DATE_FORMATS.size());
+		for (String format : ODDSPORTAL_DATE_FORMATS) {
+			final SimpleDateFormat sdf = new SimpleDateFormat(format);
+			try {
+				timeStamp = sdf.parse(text).getTime();
+				break;
+			} catch (ParseException e) {
+				exceptions.add(e);
+			}
+			
+			System.err.println("Couldn't parse date:" + text);
+			Utils.zip(ODDSPORTAL_DATE_FORMATS, exceptions).forEach(
+					pair -> System.err.format("\t%s \t-> %s", pair.first, pair.second)
+			);
+		}
 	}
 }
