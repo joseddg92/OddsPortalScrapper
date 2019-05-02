@@ -16,13 +16,23 @@ import java.util.stream.Stream;
 import org.jsoup.nodes.Element;
 
 public class Utils {
-	
-	/* From https://stackoverflow.com/questions/3471397/how-can-i-pretty-print-a-duration-in-java */
+
 	public static String pretty(Duration duration) {
-		    return duration.toString()
-		            .substring(2)
-		            .replaceAll("(\\d[HMS])(?!$)", "$1 ")
-		            .toLowerCase();
+		String result = "";
+		final long hours = duration.toHours();
+		if (hours > 0)
+			result += hours + "h ";
+		duration = duration.minusHours(hours);
+
+		final long minutes = duration.toMinutes();
+		if (minutes > 0)
+			result += minutes + "m ";
+		duration = duration.minusMinutes(minutes);
+
+		final float seconds = duration.getSeconds() + (float) duration.getNano() / 1000000000;
+		result += String.format("%.2f", seconds) + "s";
+
+		return result;
 	}
 	
 	public static <K,V> Stream<Pair<K,V>> zip(List<K> keys, List<V> values) {
