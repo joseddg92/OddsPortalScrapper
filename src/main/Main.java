@@ -121,6 +121,10 @@ public class Main {
 		scrapper.findSports();
 		Duration processTime = Duration.between(timeStart, Instant.now());
 		
+		if (liveMatches.isEmpty()) {
+			System.err.println("No matches!");
+			return;
+		}
 		System.out.format(
 				"It took %s to find %d live matches matches (%s / match)\n", 
 				Utils.pretty(processTime), 
