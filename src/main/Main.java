@@ -122,10 +122,10 @@ public class Main {
 		Duration processTime = Duration.between(timeStart, Instant.now());
 		
 		System.out.format(
-				"It took %s to find %d live matches matches (%.2f matches/sec)\n", 
+				"It took %s to find %d live matches matches (%s / match)\n", 
 				Utils.pretty(processTime), 
 				liveMatches.size(), 
-				(double) liveMatches.size() / processTime.getSeconds()
+				Utils.pretty(processTime.dividedBy(liveMatches.size()))
 		);
 		
 				
@@ -138,10 +138,10 @@ public class Main {
 		processTime = Duration.between(timeStart, Instant.now());
 		
 		System.out.format(
-				"It took %s to load %d matches (%.2f sec/match)\n", 
+				"It took %s to load %d matches (%s / match)\n", 
 				Utils.pretty(processTime), 
 				liveMatches.size(), 
-				(double) processTime.getSeconds() / liveMatches.size()
+				Utils.pretty(processTime.dividedBy(liveMatches.size()))
 		);
 	}
 	
