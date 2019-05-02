@@ -53,7 +53,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 	
 	public void unregisterListener(ParserListener l) {
 		for (WeakReference<ParserListener> w : listeners) {
-			if (w.get() != null && w.get().equals(l)) {
+			if (l.equals(w.get())) {
 				listeners.remove(w);
 				return;
 			}
@@ -63,9 +63,10 @@ public class OddsPortalScrapper implements AutoCloseable {
 	private boolean fireEventCheckStop(Notifiable obj) {
 		boolean keepGoing = true;
 	
-		Iterator<WeakReference<ParserListener>> it = listeners.iterator();
-		while (it.hasNext()) {
-			ParserListener listener = it.next().get();
+		for (Iterator<WeakReference<ParserListener>> it = listeners.iterator(); it.hasNext(); ) {
+			final WeakReference<ParserListener> wr = it.next();
+			final ParserListener listener = wr.get();
+
 			if (listener == null) {
 				it.remove();
 				continue;
@@ -73,6 +74,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 
 			keepGoing &= obj.notify(listener);
 		}
+
 		return !keepGoing;
 	}
 	
