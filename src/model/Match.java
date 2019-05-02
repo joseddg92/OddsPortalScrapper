@@ -40,7 +40,7 @@ public class Match implements Notifiable, Serializable {
 	}
 
 	public String toString() {
-		return "Match<" + getKey() + ">[" + league + "/" + name + (isLive ? " <LIVE!> " : "") + "]";
+		return "Match<" + getKey() + ">[" + league + "," + name + (isLive ? " <LIVE!> " : "") + "]";
 	}
 	
 	public boolean notify(ParserListener listener) {
