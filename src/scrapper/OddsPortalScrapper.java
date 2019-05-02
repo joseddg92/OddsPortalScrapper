@@ -158,34 +158,33 @@ public class OddsPortalScrapper implements AutoCloseable {
 	public void parse(League league) {
 		final WebData webData = htmlProvider.get(BASE_URL + league.relUrl);
 		final Document doc = webData.getDoc();
-		
-		Elements rows = doc.select("table[style] tbody > tr");
+		Elements rows = doc.select("table[style] tbody > tr:not(.center):not(.table-dummyrow)");
 		if (rows.isEmpty()) {
 			logError(new ScrapException("League " + league +  " contained no rows", webData));
 			return;
 		}
 		
-		final Collection<String> rowsClassesToSkip = Arrays.asList("center", "table-dummyrow");
 		for (Element row : rows) {
-			List<String> rowClasses = Arrays.asList(row.attr("class").split(" "));
-			if (!Collections.disjoint(rowsClassesToSkip, rowClasses))
-				continue;
-		
 			Element matchElement = null;
-			Elements possibleMatchElement = row.select("td.name a");
+			Elements possibleMatchElement = row.select("td.name > a");
 			for (Element e : possibleMatchElement) {
-				if (e.id().isEmpty()) {
+				final String text = e.text();
+				/* Take first child with text inside */
+				if (text != null && !text.trim().isEmpty()) {
 					matchElement = e;
 					break;
 				}
 			}
-			if (matchElement == null)
+			if (matchElement == null) {
+				logError(new ScrapException("Could not locate match name, skipping", webData, row));
 				continue;
+			}
 			
-			String matchName = matchElement.text();
-			String matchUrl = matchElement.attr("href");
-			boolean isLive = matchElement.selectFirst("span.live-odds-ico-prev") != null;
-			Match match = new Match(league, matchName, BASE_URL + matchUrl, isLive);
+			final String matchName = matchElement.text();
+			final String matchUrl = matchElement.attr("href");
+			final String webId = row.attr("xeid");
+			final boolean isLive = row.selectFirst("span.live-odds-ico-prev") != null;
+			Match match = new Match(league, matchName, BASE_URL + matchUrl, isLive, webId);
 			
 			if (fireEventCheckStop(match))
 				return;

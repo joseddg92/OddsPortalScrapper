@@ -12,12 +12,14 @@ public class Match implements Notifiable, Serializable {
 	public final String name;
 	public final String url;
 	public final boolean isLive;
+	private final String webKey;
 	
-	public Match(League league, String name, String url, boolean isLive) {
+	public Match(League league, String name, String url, boolean isLive, String webKey) {
 		this.league = league;
 		this.name = name;
 		this.url = url;
 		this.isLive = isLive;
+		this.webKey = webKey;
 	}
 	
 	public String getLocalTeam() {
@@ -31,12 +33,7 @@ public class Match implements Notifiable, Serializable {
 	}
 	
 	public String getKey() {
-		int beginIndex = url.lastIndexOf("-");
-		int endIndex = url.lastIndexOf("/");
-		if (endIndex < beginIndex)
-			endIndex = url.length();
-
-		return url.substring(beginIndex + 1, endIndex);
+		return webKey;
 	}
 
 	public String toString() {
