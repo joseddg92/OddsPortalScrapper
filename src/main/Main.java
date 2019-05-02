@@ -24,7 +24,7 @@ import model.MatchData;
 import model.ScrapException;
 import model.Sport;
 import persistence.DDBBManager;
-import persistence.SQLiteManager_v1;
+import persistence.SQLiteManager_v2;
 import scrapper.OddsPortalScrapper;
 import scrapper.ParserListener;
 import util.EclipseTools;
@@ -154,9 +154,9 @@ public class Main {
 		System.setProperty("webdriver.chrome.driver", "C:\\chromedriver.exe");
 		BINDATA_FODLER.toFile().mkdir();
 
-		try (DDBBManager ddbbManager = new SQLiteManager_v1()) {
+		try (DDBBManager ddbbManager = new SQLiteManager_v2()) {
 			ddbbManager.ensureDDBBCreated();
-			
+
 			try (OddsPortalScrapper scrapper = new OddsPortalScrapper()) {
 				while (true)
 					parseMatches(ddbbManager, scrapper);
