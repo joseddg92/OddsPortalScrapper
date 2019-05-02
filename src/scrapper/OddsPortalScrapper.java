@@ -44,7 +44,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 	
 	private static final Pattern sportsOnClickToURL_regex = Pattern.compile("tab_sport_main.select\\( '(.*)'\\);this.blur\\(\\);return false;");	
 			
-	private SeleniumChromeProvider htmlProvider = new SeleniumChromeProvider();
+	private SeleniumChromeProvider htmlProvider = new SeleniumChromeProvider(true);
 	private List<WeakReference<ParserListener>> listeners = new ArrayList<>();
 	
 	public void registerListener(ParserListener l) {
