@@ -23,6 +23,13 @@ public class MatchData implements Notifiable, Serializable {
 		public final String result;
 		
 		public OddKey(WebSection section, String row, String betHouse, String result) {
+			/*
+			 * For some categories the section.tab (cat1) is also present in row (cat3).
+			 * Get rid of that so that hopefully cat3 can be parsed to a double.
+			 */
+			if (row != null && row.startsWith(section.tab))
+				row = row.substring(section.tab.length()).trim();
+
 			this.section = section;
 			this.row = row;
 			this.betHouse = betHouse;
