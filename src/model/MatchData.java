@@ -76,6 +76,10 @@ public class MatchData implements Notifiable, Serializable {
 		existingOdds.putAll(newOdds);
 	}
 	
+	public String toString() {
+		return "<" + match + " -> " + getOdds().size() + ">";
+	}
+	
 	public Map<OddKey, Map<StringDate, Double>> getOdds() {
 		return Collections.unmodifiableMap(odds);
 	}
