@@ -33,8 +33,8 @@ import util.Utils;
 public class Main {
 
 	private static final String ERROR_REPORT_PATH = "log";
-	private static final Path BINDATA_FODLER = Paths.get("bindata");
-		
+	private static final Path BINDATA_FOLDER = Paths.get("bindata");
+	
 	private static void writeToFile(File output, Serializable object) throws IOException {
 		System.out.println("Writing to " + output.getAbsolutePath().toString());
 		output.createNewFile();
@@ -46,28 +46,28 @@ public class Main {
 	private static void parseMatches(DDBBManager ddbbManager, OddsPortalScrapper scrapper) {
 		final String runStartDate = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date());
 		final List<Match> liveMatches = new ArrayList<>();
-		
-		final ParserListener listener = new ParserListener() {
 
+		final ParserListener listener = new ParserListener() {
 			int nErrors = 0;
-			
 			@Override
 			public void onError(ScrapException error) {
-				nErrors++;
-
+				final File errorFolder = new File(ERROR_REPORT_PATH, runStartDate);
+				final String reportName = String.format("%d.log", nErrors++);
+				
 				System.err.println("Error logged: " + error.getMessage());
-				final String reportName = String.format("%s_%d.log", runStartDate, nErrors);
-				try (PrintWriter writer = new PrintWriter(new File(ERROR_REPORT_PATH, reportName))) {
+				errorFolder.mkdir();
+
+				try (PrintWriter writer = new PrintWriter(new File(errorFolder, reportName))) {
 						error.logTo(writer);
 				} catch (IOException e) {
 					System.err.println("Could not log exception.");
 					e.printStackTrace();
 				}
 				
-				final String screenShotName = String.format("%s_%d.png", runStartDate, nErrors);
+				final String screenShotName = String.format("%d.png", nErrors);
 				byte[] pngBytes = error.webData == null ? null : error.webData.getScreenShot();
 				if (pngBytes != null) {
-					try (OutputStream stream = new FileOutputStream(new File(ERROR_REPORT_PATH, screenShotName))) {
+					try (OutputStream stream = new FileOutputStream(new File(errorFolder, screenShotName))) {
 						stream.write(pngBytes);
 					} catch (IOException e) {
 						System.err.println("Could not log exception screenshot.");
