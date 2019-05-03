@@ -6,6 +6,8 @@ import org.openqa.selenium.OutputType;
 import org.openqa.selenium.TakesScreenshot;
 import org.openqa.selenium.WebDriver;
 
+import htmlProvider.SeleniumChromeProvider;
+
 public class WebData {
 
 	private Document doc;
@@ -28,12 +30,13 @@ public class WebData {
 		return screenShot;
 	}
 	
-	public static WebData fromDriver(WebDriver driver) {
+	public static WebData fromProvider(SeleniumChromeProvider provider) {
+		final WebDriver driver = provider.getDriver();
 		final WebData wb = new WebData();
 		wb.pageSource = driver.getPageSource();
 		wb.pageUrl = driver.getCurrentUrl();
 
-		if (driver instanceof TakesScreenshot) {
+		if (!provider.isHeadless() && driver instanceof TakesScreenshot) {
 			try {
 				wb.screenShot = ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
 			} catch (Exception e) {}

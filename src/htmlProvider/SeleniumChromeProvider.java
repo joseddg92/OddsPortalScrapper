@@ -55,6 +55,7 @@ public class SeleniumChromeProvider implements AutoCloseable {
 	);
 			
 	private ChromeDriver driver;
+	private boolean headless;
 	private int loadTimeout = DEFAULT_WEBLOAD_TIMEOUT_SEC;
 	
 	private static final String USER = "sureTenis123";
@@ -64,7 +65,17 @@ public class SeleniumChromeProvider implements AutoCloseable {
 		this(false);
 	}
 	
+	public WebDriver getDriver() {
+		return driver;
+	}
+	
+	public boolean isHeadless() {
+		return headless;
+	}
+	
 	public SeleniumChromeProvider(boolean headless) {
+		this.headless = headless;
+
 		ChromeOptions options = new ChromeOptions();
 		if (headless)
 			options.addArguments("--headless");
@@ -167,7 +178,7 @@ public class SeleniumChromeProvider implements AutoCloseable {
 			driver.get(url);
 		}
 		waitJs();
-		WebData webData = WebData.fromDriver(driver);
+		WebData webData = WebData.fromProvider(this);
 		
 		if (!isLoggedIn(webData.getDoc())) {
 			System.out.println("Not logged in, login in...");
