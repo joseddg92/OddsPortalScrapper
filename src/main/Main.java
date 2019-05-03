@@ -116,6 +116,7 @@ public class Main {
 		};
 		
 		scrapper.registerListener(listener);
+		scrapper.registerListener(new DataQualityChecker());
 
 		Instant timeStart = Instant.now();
 		scrapper.findSports();
