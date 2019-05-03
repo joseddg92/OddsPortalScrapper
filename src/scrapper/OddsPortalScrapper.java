@@ -1,10 +1,5 @@
 package scrapper;
-import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,35 +40,25 @@ public class OddsPortalScrapper implements AutoCloseable {
 	private static final Pattern sportsOnClickToURL_regex = Pattern.compile("tab_sport_main.select\\( '(.*)'\\);this.blur\\(\\);return false;");	
 			
 	private SeleniumChromeProvider htmlProvider = new SeleniumChromeProvider(true);
-	private List<WeakReference<ParserListener>> listeners = new ArrayList<>();
+	private List<ParserListener> listeners = new ArrayList<>();
 	
 	public void registerListener(ParserListener l) {
-		listeners.add(new WeakReference<>(l));
+		listeners.add(l);
 	}
 	
 	public void unregisterListener(ParserListener l) {
-		for (WeakReference<ParserListener> w : listeners) {
-			if (l.equals(w.get())) {
-				listeners.remove(w);
-				return;
-			}
-		}
+		listeners.remove(l);
 	}
-	
+
+	public void clearListeners() {
+		listeners.clear();
+	}
+
 	private boolean fireEventCheckStop(Notifiable obj) {
 		boolean keepGoing = true;
 	
-		for (Iterator<WeakReference<ParserListener>> it = listeners.iterator(); it.hasNext(); ) {
-			final WeakReference<ParserListener> wr = it.next();
-			final ParserListener listener = wr.get();
-
-			if (listener == null) {
-				it.remove();
-				continue;
-			}
-
+		for (ParserListener listener : listeners)
 			keepGoing &= obj.notify(listener);
-		}
 
 		return !keepGoing;
 	}
@@ -363,11 +348,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 	}
 	
 	private void logError(ScrapException e) {
-		for (WeakReference<ParserListener> w : listeners) {
-			if (w.get() != null) {
-				w.get().onError(e);
-				return;
-			}
-		}
+		for (ParserListener listener : listeners)
+			listener.onError(e);
 	}
 }

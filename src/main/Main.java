@@ -147,6 +147,7 @@ public class Main {
 				liveMatches.size(), 
 				Utils.pretty(processTime.dividedBy(liveMatches.size()))
 		);
+		scrapper.clearListeners();
 	}
 	
 	public static void main(String[] args) throws Exception {
