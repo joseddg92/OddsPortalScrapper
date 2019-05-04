@@ -81,7 +81,7 @@ public class DataQualityChecker implements ParserListener {
 				System.err.println("Bad value:" + key + " is empty");
 			
 			for (Entry<StringDate, Double> e2 : value.entrySet()) {
-				if (! (e2.getValue() == 0 || e2.getValue() > 1))
+				if (! (e2.getValue() == 0 || e2.getValue() >= 1))
 					System.err.println("Bad odd: " + key + " > " + e2.getKey() + " -> " + e2.getValue());
 			}
 		}
