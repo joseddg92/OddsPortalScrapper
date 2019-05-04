@@ -141,9 +141,17 @@ public class SeleniumChromeProvider implements AutoCloseable {
 					firstSubTab = false;
 				}
 				
-				/* Expand all bet groups by 'clicking' on them */
-				for (Element rowToBeExpanded : webData.getDoc().select("#odds-data-table > div > div > strong > a"))
-					driver.executeScript(rowToBeExpanded.attr("onclick"));
+				/* 
+				 * Expand all bet groups by 'clicking' on them. Sometimes the rows are
+				 * already expanded, so expand only if they don' contain data to be
+				 * parsed (table.table-main)
+				 */
+				for (Element rowToBeExpanded : webData.getDoc().select("#odds-data-table > div.table-container")) {
+					final Element jsCodeContainer = rowToBeExpanded.selectFirst("div > strong > a");
+					final boolean needsToBeExpanded = rowToBeExpanded.selectFirst("table.table-main") == null;
+					if (needsToBeExpanded && jsCodeContainer != null)
+						driver.executeScript(jsCodeContainer.attr("onclick"));
+				}
 
 				List<WebElement> oddElements = driver.findElementsByCssSelector(
 						"div#odds-data-table div.table-container:not(.exchangeContainer) table > tbody > tr td.odds"
