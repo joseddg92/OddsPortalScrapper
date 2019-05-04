@@ -262,15 +262,13 @@ public class OddsPortalScrapper implements AutoCloseable {
 					sectionEntry.getValue().second.stream().map(
 							s -> s == null ? null : Jsoup.parse(s)).collect(Collectors.toList()
 					);
-					
-			Elements oddTables = doc.select("div#odds-data-table div.table-container");
+				
+			/* Do not parse exchanges for now */
+			final Elements oddTables = doc.select("div#odds-data-table div.table-container:not(.exchangeContainer)");
 			if (oddTables.isEmpty()) {
 				logError(new ScrapException("Could not locate any oddTable, " + section +", " + m, webData, doc));
 				return;
 			}
-			
-			/* Do not parse exchanges for now */
-			oddTables.removeIf(oddTable -> oddTable.attr("class").contains("exchangeContainer"));
 
 			for (Element oddTable : oddTables) {
 				String oddTableTitle = null;
