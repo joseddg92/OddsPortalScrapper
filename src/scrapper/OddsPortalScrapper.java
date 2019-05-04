@@ -299,7 +299,12 @@ public class OddsPortalScrapper implements AutoCloseable {
 					columns.remove(lastColumn);
 				}
 
+				if (columns.isEmpty())
+					logError(new ScrapException("There are no columns!", webData, oddTable));
+				
 				Elements rows = oddTable.select("table > tbody > tr");
+				if (rows.isEmpty())
+					logError(new ScrapException("There are no rows!", webData, oddTable));
 
 				for (Element row : rows) {
 					Elements oddElements = row.select("td.odds");
@@ -331,16 +336,20 @@ public class OddsPortalScrapper implements AutoCloseable {
 						
 						final OddKey key = new OddKey(section, oddTableTitle, betHouse, column);
 						Map<StringDate, Double> oddsForKey;
+						Element fragment = null;
 						try {
-							oddsForKey = parseOddHistory(htmlOddHistoryFragmentsList.remove(0));
+							fragment = htmlOddHistoryFragmentsList.remove(0);
+							oddsForKey = parseOddHistory(fragment);
 						} catch (IndexOutOfBoundsException e) {
 							logError(new ScrapException("htmlOddHistoryFragments was short (current element " + i + " )", webData, doc));
 							/* At least used the parsed odd with current timestamp */
 							oddsForKey = new LinkedHashMap<>(1);
 							oddsForKey.put(new StringDate(System.currentTimeMillis()), odd);
 						}
-						
-						matchData.addOdds(key, oddsForKey);
+						if (oddsForKey.isEmpty())
+							logError(new ScrapException("Empty oddKey: " + key, webData, oddElement));
+						else 
+							matchData.addOdds(key, oddsForKey);
 					}
 				}
 			}
@@ -349,7 +358,10 @@ public class OddsPortalScrapper implements AutoCloseable {
 				logError(new ScrapException("Extra fragments...", webData, doc));
 		}
 		
-		fireEventCheckStop(matchData);
+		if (matchData.getOdds().isEmpty())
+			logError(new ScrapException("Empty matchData D: " + matchData));
+		else
+			fireEventCheckStop(matchData);
 	}
 	
 	@Override
