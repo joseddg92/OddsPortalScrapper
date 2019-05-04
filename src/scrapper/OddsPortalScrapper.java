@@ -145,7 +145,17 @@ public class OddsPortalScrapper implements AutoCloseable {
 		final Document doc = webData.getDoc();
 		Elements rows = doc.select("table[style] tbody > tr:not(.center):not(.table-dummyrow)");
 		if (rows.isEmpty()) {
-			logError(new ScrapException("League " + league +  " contained no rows", webData));
+			/* 
+			 * If there's an info box informing about no odds, then we know for
+			 * sure that there were no parse errors, it is just that there are
+			 * no available matches but the League is there for some reason...
+			 * Otherwise, log an error, just in case it was a parse problem.
+			 */
+			Element infoMessage = doc.selectFirst("div.message-info div.cms");
+			final String NO_MATCHES_AVAILABLE_MSG = "will appear here as soon as bookmaker betting odds become available."; 
+			if (!NO_MATCHES_AVAILABLE_MSG.contains(infoMessage.text()))
+				logError(new ScrapException(league +  " contained no rows", webData));
+
 			return;
 		}
 		
