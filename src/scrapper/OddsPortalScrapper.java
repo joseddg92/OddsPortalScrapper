@@ -279,7 +279,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 				Element headerRow = oddTable.selectFirst("thead > tr");
 				if (headerRow == null) {
 					logError(new ScrapException("No header row while parsing " + section + "in " + m, webData, doc));
-					return;
+					continue;
 				}
 				
 				List<String> columns = headerRow.select("tr a").stream().map(e -> e.text()).collect(Collectors.toList());
