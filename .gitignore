@@ -1,3 +1,7 @@
+/bindata/
+/visualvm_142
+visualvm*
+sqlite*
 /log/
 /bin
 *db
