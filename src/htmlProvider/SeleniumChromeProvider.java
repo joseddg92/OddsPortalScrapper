@@ -65,7 +65,7 @@ public class SeleniumChromeProvider implements AutoCloseable {
 		this(false);
 	}
 	
-	public WebDriver getDriver() {
+	public RemoteWebDriver getDriver() {
 		return driver;
 	}
 	
