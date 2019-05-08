@@ -14,6 +14,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
@@ -25,17 +27,101 @@ import util.Utils;
 
 public class SQLiteManager_v2 implements DDBBManager {
 
-	private static String DB_FILE_PATH = "odds_v2.db";
-	private static String SQLITE_JDBC_STRING = "jdbc:sqlite:" + DB_FILE_PATH;
-	private static String CREATE_DDBB_V1_SCRIPT_RES_PATH = "/persistence/db_create_v2.sql";
+	private static final String DB_FILE_PATH = "odds_v2.db";
+	private static final String SQLITE_JDBC_STRING = "jdbc:sqlite:" + DB_FILE_PATH;
+	private static final String CREATE_DDBB_V2_SCRIPT_RES_PATH = "/persistence/db_create_v2.sql";
 	
-	private static String NEW_LINE_SEPARATOR = System.lineSeparator() + System.lineSeparator();
+	private static final String NEW_LINE_SEPARATOR = System.lineSeparator() + System.lineSeparator();
+	
+	/* A high value is preferred, this gives up some memory to try to never lock a html provider therad */
+	private static final int QUEUE_SIZE = 1024;
+	/* Warn if less than this amount of slots are available in the queue */
+	private static final int WARNING_THREHOLD = 16;
+	
+	private class WorkingThread extends Thread {
+		
+		private volatile boolean running = false;
+		
+		public WorkingThread() {
+			super("SQLWorkingThread");
+		}
+		
+		public void stopAndWait() {
+			if (!running)
+				return;
+
+			running = false;
+			try {
+				/* Block callers until we are done, unless called from the thread itself for some reason */
+				if (!Thread.currentThread().equals(this))
+						this.join();
+			} catch (InterruptedException e) { }
+		}
+		
+		public void run() {
+			running = true;
+
+			while (running) {
+				try {
+					MatchData data = dataToBeStored.take();
+					try {
+						writeToDDBB(data);
+					} catch (SQLException e) {
+						if (listener != null) {
+							listener.onSqlError(data,  e);
+						}
+					}
+				} catch (InterruptedException e) {}
+			}
+		}
+	}
+	
+	private BlockingQueue<MatchData> dataToBeStored = new ArrayBlockingQueue<>(QUEUE_SIZE);
+	private SqlErrorListener listener = null;
+	private WorkingThread workingThread = new WorkingThread();
+	
+	public SQLiteManager_v2(SqlErrorListener listener) throws ClassNotFoundException {
+		this();
+		setErrorListener(listener);
+	}
 	
 	public SQLiteManager_v2() throws ClassNotFoundException {
 		Class.forName("org.sqlite.JDBC");
 	}
 	
-	public void store(MatchData data) throws SQLException {
+	public synchronized void setErrorListener(SqlErrorListener listener) {
+		this.listener = listener;
+	}
+	
+	public void store(MatchData data) {
+		if (dataToBeStored.remainingCapacity() < WARNING_THREHOLD) 
+			System.err.println("SQLManager can't keep up! Working thread will soon block");
+		
+		try {
+			dataToBeStored.put(data);
+		} catch (InterruptedException e) { }
+	}
+	
+	@Override
+	public synchronized void close() {
+		workingThread.stopAndWait();
+	}
+	
+	public synchronized void open() throws SQLException, IOException {
+		/* Esure DDBB is created */
+		try (InputStream is = getClass().getResourceAsStream(CREATE_DDBB_V2_SCRIPT_RES_PATH)) {
+			String createDDBBScript = Utils.isToString(is);
+			List<String> sqlStatements = Arrays.asList(createDDBBScript.split(NEW_LINE_SEPARATOR));
+	        try (Connection connection = DriverManager.getConnection(SQLITE_JDBC_STRING);
+	        	 Statement statement = connection.createStatement()) {
+	        	for (String sqlStatement : sqlStatements)
+	        		statement.execute(sqlStatement);
+	        }
+        }
+		workingThread.start();
+	}
+	
+	private void writeToDDBB(MatchData data) throws SQLException {
 		final Match m = data.match;
 		
 		try (Connection con = DriverManager.getConnection(SQLITE_JDBC_STRING)) {
@@ -94,23 +180,6 @@ public class SQLiteManager_v2 implements DDBBManager {
 		    	throw e;
 		    }
 		}
-	}
-	
-	@Override
-	public void close() throws Exception {
-		/* For the moment, do nothing */
-	}
-	
-	public void ensureDDBBCreated() throws SQLException, IOException {
-		try (InputStream is = getClass().getResourceAsStream(CREATE_DDBB_V1_SCRIPT_RES_PATH)) {
-			String createDDBBScript = Utils.isToString(is);
-			List<String> sqlStatements = Arrays.asList(createDDBBScript.split(NEW_LINE_SEPARATOR));
-	        try (Connection connection = DriverManager.getConnection(SQLITE_JDBC_STRING);
-	        	 Statement statement = connection.createStatement()) {
-	        	for (String sqlStatement : sqlStatements)
-	        		statement.execute(sqlStatement);
-	        }
-        }
 	}
 	
 	private static void fillStatement(PreparedStatement s, int i, Object o) throws SQLException {

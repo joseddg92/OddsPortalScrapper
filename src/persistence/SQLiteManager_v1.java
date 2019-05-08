@@ -91,7 +91,7 @@ public class SQLiteManager_v1 implements DDBBManager {
 		/* For the moment, do nothing */
 	}
 	
-	public void ensureDDBBCreated() throws SQLException, IOException {
+	public void open() throws SQLException, IOException {
 		try (InputStream is = getClass().getResourceAsStream(CREATE_DDBB_V1_SCRIPT_RES_PATH)) {
 			String createDDBBScript = Utils.isToString(is);
 			List<String> sqlStatements = Arrays.asList(createDDBBScript.split(NEW_LINE_SEPARATOR));

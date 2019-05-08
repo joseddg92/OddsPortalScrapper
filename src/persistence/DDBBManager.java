@@ -7,5 +7,5 @@ import model.MatchData;
 
 public interface DDBBManager extends AutoCloseable {
 	public void store(MatchData data) throws SQLException;
-	public void ensureDDBBCreated() throws SQLException, IOException;
+	public void open() throws SQLException, IOException;
 }
