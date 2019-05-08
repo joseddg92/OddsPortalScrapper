@@ -200,6 +200,7 @@ public class SeleniumChromeProvider implements AutoCloseable {
 	@Override
 	public void close() throws Exception {
 		driver.close();
+		driver.quit();
 	}
 	
 	private void logIn() {
