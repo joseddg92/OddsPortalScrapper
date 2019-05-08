@@ -47,7 +47,10 @@ public class MatchData implements Notifiable, Serializable {
 				return false;
 
 			OddKey o = (OddKey) other;
-			return section.equals(o.section) && row.equals(o.row) && betHouse.equals(o.betHouse) && result.equals(o.result);	
+			return Objects.equals(section, o.section) && 
+				   Objects.equals(row, o.row) &&
+				   Objects.equals(betHouse, o.betHouse) &&
+				   Objects.equals(result, o.result);
 		}
 		
 		@Override
