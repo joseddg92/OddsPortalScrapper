@@ -89,10 +89,13 @@ public class OddsPortalScrapper implements AutoCloseable {
 			}
 		}
 	}
-	
+
 	public void parse(Sport sport) {
-		htmlProvider.get("http://www.google.es");
-		final WebData webData = htmlProvider.get(String.format(SPORT_URL_FORMAT, sport.name));
+		/* As a workaround we need to load a different page (e.g. google) first */
+		final WebData webData = htmlProvider.getAndHandle("http://www.google.es", (unused, handler) -> {
+			return handler.get(String.format(SPORT_URL_FORMAT, sport.name));
+		});
+
 		final Document doc = webData.getDoc();
 		
 		Elements rows = doc.select("table[style=\"display: table;\"] tbody > tr");
