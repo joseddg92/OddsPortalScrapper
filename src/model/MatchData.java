@@ -1,9 +1,11 @@
 package model;
 
+import java.io.PrintStream;
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 
 import scrapper.ParserListener;
@@ -83,6 +85,15 @@ public class MatchData implements Notifiable, Serializable {
 		return "<" + match + " -> " + getOdds().size() + ">";
 	}
 	
+	public void dumpContents(PrintStream ps) {
+		for (Entry<OddKey, Map<StringDate, Double>> e : getOdds().entrySet()) {
+			ps.println(e.getKey().toString());
+			for (Entry<StringDate, Double> odd : e.getValue().entrySet()) {
+				ps.println("\t" + odd.getKey() + "\t -> " + odd.getValue());
+			}
+		}
+	}
+	
 	public Map<OddKey, Map<StringDate, Double>> getOdds() {
 		return Collections.unmodifiableMap(odds);
 	}
@@ -91,6 +102,4 @@ public class MatchData implements Notifiable, Serializable {
 	public boolean notify(ParserListener listener) {
 		return listener.onElementParsed(this);
 	}
-
-	
 }
