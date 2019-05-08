@@ -197,6 +197,35 @@ public class SeleniumChromeProvider implements AutoCloseable {
 		return webData;
 	}
 	
+	private WebDriverHandler wdb = new WebDriverHandler() {
+		public void waitJs() {
+			SeleniumChromeProvider.this.waitJs();
+		}
+		
+		@Override
+		public RemoteWebDriver getDriver() {
+			return driver;
+		}
+		
+		@Override
+		public WebData get(String url) {
+			return SeleniumChromeProvider.this.get(url);
+		}
+		
+		@Override
+		public void executeScript(String code, Object... objects) {
+			driver.executeScript(code, objects);
+		}
+	};
+	
+	public void getAndHandle(String url, BiConsumer<WebData, WebDriverHandler> handler) {
+		handler.accept(get(url), wdb);
+	}
+	
+	public <T> T getAndHandle(String url, BiFunction<WebData, WebDriverHandler, T> handler) {
+		return handler.apply(get(url), wdb);
+	}
+	
 	@Override
 	public void close() throws Exception {
 		driver.close();
