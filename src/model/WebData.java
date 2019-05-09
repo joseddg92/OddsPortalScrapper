@@ -4,7 +4,6 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.openqa.selenium.OutputType;
 import org.openqa.selenium.TakesScreenshot;
-import org.openqa.selenium.WebDriver;
 
 import htmlProvider.SeleniumChromeProvider;
 
@@ -31,19 +30,19 @@ public class WebData {
 	}
 	
 	public static WebData fromProvider(SeleniumChromeProvider provider) {
-		final WebDriver driver = provider.getDriver();
-		final WebData wb = new WebData();
-		wb.pageSource = driver.getPageSource();
-		wb.pageUrl = driver.getCurrentUrl();
-
-		if (!provider.isHeadless() && driver instanceof TakesScreenshot) {
-			try {
-				wb.screenShot = ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
-			} catch (Exception e) {}
-		}
-
-
-		return wb;
+		return provider.handle((driver) -> {
+			final WebData wb = new WebData();
+			wb.pageSource = driver.getPageSource();
+			wb.pageUrl = driver.getCurrentUrl();
+	
+			if (!provider.isHeadless() && driver instanceof TakesScreenshot) {
+				try {
+					wb.screenShot = ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
+				} catch (Exception e) {}
+			}
+	
+			return wb;
+		});
 	}
 	
 	private void ensureDocParsed() {

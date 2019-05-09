@@ -16,15 +16,11 @@ import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
 import org.openqa.selenium.By;
 import org.openqa.selenium.NoSuchElementException;
-import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.interactions.Actions;
-import org.openqa.selenium.remote.RemoteWebDriver;
-import org.openqa.selenium.support.ui.ExpectedConditions;
-import org.openqa.selenium.support.ui.WebDriverWait;
 
+import htmlProvider.RWDUtils;
 import htmlProvider.SeleniumChromeProvider;
-import htmlProvider.WebDriverHandler;
 import model.Country;
 import model.League;
 import model.Match;
@@ -92,8 +88,9 @@ public class OddsPortalScrapper implements AutoCloseable {
 
 	public void parse(Sport sport) {
 		/* As a workaround we need to load a different page (e.g. google) first */
-		final WebData webData = htmlProvider.getAndHandle("http://www.google.es", (unused, handler) -> {
-			return handler.get(String.format(SPORT_URL_FORMAT, sport.name));
+		final WebData webData = htmlProvider.handle((unused) -> {
+			htmlProvider.get("http://www.google.es");
+			return htmlProvider.get(String.format(SPORT_URL_FORMAT, sport.name));
 		});
 
 		final Document doc = webData.getDoc();
@@ -226,27 +223,10 @@ public class OddsPortalScrapper implements AutoCloseable {
 		return map;
 	}
 
-	private static void waitLoadSpinner(WebDriverHandler wdh) {
-		/* 
-		 * Wait for the spinner to appear, and then to disappear. 
-		 * If it is not found within a second, keep going as maybe
-		 * we didn't give it time to appear.
-		 */
-		try {
-			new WebDriverWait(wdh.getDriver(), 1, 50).until(ExpectedConditions.visibilityOfElementLocated(By.id("event-wait-msg-main")));
-		} catch (TimeoutException e) {}
-		
-		try {
-			new WebDriverWait(wdh.getDriver(), 60, 50).until(ExpectedConditions.invisibilityOfElementLocated(By.id("event-wait-msg-main")));
-		} catch (TimeoutException e) {}
-		
-		/* After the spinner has disappeared, js is changing the DOM, so wait for it to finish */
-		wdh.waitJs();
-	}
-		
 	public void parse(Match m) {
-		MatchData data = htmlProvider.getAndHandle(m.url, (webData, driverHandler) -> {
-			final RemoteWebDriver driver = driverHandler.getDriver();
+		MatchData data = htmlProvider.handle((driver) -> {
+			RWDUtils utils = new RWDUtils(driver);
+			WebData webData = htmlProvider.get(m.url);
 			Document doc = webData.getDoc();
 			Element dateElement = doc.selectFirst("p.date");
 			if (dateElement == null) {
@@ -292,9 +272,9 @@ public class OddsPortalScrapper implements AutoCloseable {
 						tabTitle = tab.text();
 
 					String jsCode = tab.attr("onmousedown");
-					driverHandler.executeScript(jsCode);
-					waitLoadSpinner(driverHandler);
-					webData = driverHandler.get();
+					driver.executeScript(jsCode);
+					utils.waitLoadSpinner();
+					webData = htmlProvider.get();
 				} else {
 					firstTab = false;
 				}
@@ -310,9 +290,9 @@ public class OddsPortalScrapper implements AutoCloseable {
 					if (!firstSubTab) {
 						subtabTitle = subtab.attr("title");
 						String jsCode = subtab.attr("onmousedown");
-						driverHandler.executeScript(jsCode);
-						waitLoadSpinner(driverHandler);
-						webData = driverHandler.get();
+						driver.executeScript(jsCode);
+						utils.waitLoadSpinner();
+						webData = htmlProvider.get();
 					} else {
 						firstSubTab = false;
 					}
@@ -330,12 +310,12 @@ public class OddsPortalScrapper implements AutoCloseable {
 						final boolean needsToBeExpanded = rowToBeExpanded.selectFirst("table.table-main") == null;
 						if (needsToBeExpanded && jsCodeContainer != null) {
 							rowsExpanded++;
-							driverHandler.executeScript(jsCodeContainer.attr("onclick"));
+							driver.executeScript(jsCodeContainer.attr("onclick"));
 						}
 					}
 
 					final WebSection section = new WebSection(tabTitle, subtabTitle);
-					webData = driverHandler.get();
+					webData = htmlProvider.get();
 					doc = webData.getDoc();
 
 					final Elements oddTables = doc.select("div#odds-data-table div.table-container:not(.exchangeContainer)");
