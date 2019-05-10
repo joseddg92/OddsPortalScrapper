@@ -14,6 +14,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.stream.Collector;
@@ -33,6 +34,8 @@ public class SQLiteManager_v2 implements DDBBManager {
 	
 	private static final String NEW_LINE_SEPARATOR = System.lineSeparator() + System.lineSeparator();
 	
+	private static final MatchData NULL_SPECIAL_EXIT_VALUE = null;
+	
 	/* A high value is preferred, this gives up some memory to try to never lock a html provider therad */
 	private static final int QUEUE_SIZE = 1024;
 	/* Warn if less than this amount of slots are available in the queue */
@@ -51,7 +54,9 @@ public class SQLiteManager_v2 implements DDBBManager {
 				return;
 
 			running = false;
+			
 			try {
+				dataToBeStored.put(NULL_SPECIAL_EXIT_VALUE);
 				/* Block callers until we are done, unless called from the thread itself for some reason */
 				if (!Thread.currentThread().equals(this))
 						this.join();
@@ -64,6 +69,8 @@ public class SQLiteManager_v2 implements DDBBManager {
 			while (running) {
 				try {
 					MatchData data = dataToBeStored.take();
+					if (data == NULL_SPECIAL_EXIT_VALUE)
+						break;
 					try {
 						writeToDDBB(data);
 					} catch (SQLException e) {
@@ -73,6 +80,8 @@ public class SQLiteManager_v2 implements DDBBManager {
 					}
 				} catch (InterruptedException e) {}
 			}
+
+			running = false;
 		}
 	}
 	
@@ -94,6 +103,8 @@ public class SQLiteManager_v2 implements DDBBManager {
 	}
 	
 	public void store(MatchData data) {
+		Objects.requireNonNull(data);
+
 		if (dataToBeStored.remainingCapacity() < WARNING_THREHOLD) 
 			System.err.println("SQLManager can't keep up! Working thread will soon block");
 		
