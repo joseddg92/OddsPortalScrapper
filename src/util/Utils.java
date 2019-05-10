@@ -82,4 +82,8 @@ public class Utils {
 		
 		return s;
 	}
+
+	public static String firstLine(String message) {
+		return message.split(System.lineSeparator())[0];
+	}
 }

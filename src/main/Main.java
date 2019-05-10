@@ -57,6 +57,7 @@ public class Main {
 
 				System.err.format("%s%s%s\n",
 								  error.getMessage(),
+								  error.getCause() != null ? "\n\tcaused by: " + Utils.firstLine(error.getCause().getMessage()) : "",
 								  error.getCause() != null ? "\n\tcaused by: " + error.getCause().getMessage() : "",
 								  error.element != null ? "\n\ton element: " + error.element.cssSelector() : ""
 				);
