@@ -15,6 +15,7 @@ import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
 import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptException;
 import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.interactions.Actions;
@@ -391,23 +392,21 @@ public class OddsPortalScrapper implements AutoCloseable {
 								final OddKey key = new OddKey(section, oddTableTitle, betHouse, column);
 								
 								Element oddElement = oddElements.get(i);
-								Element aElement = oddElement.selectFirst("a");
-								String oddSelector = String.format("%s > td.odds:nth-child(%d)", rowSelector, oddElement.elementSiblingIndex() + 1, aElement);
+								String oddSelector = String.format("%s > td.odds:nth-child(%d)", rowSelector, oddElement.elementSiblingIndex() + 1);
 								
-								/* Some times there's a nested <a> element with a link to the bethouse */
-								if (aElement != null) {
-									oddElement = aElement;
-									oddSelector += " > a";
-								}
+								Element overElement = oddElement.selectFirst("[onmouseover]");
+								oddSelector += " > " + Utils.selectorFromTo(oddElement, overElement);
 								
 								Map<StringDate, Double> oddsForKey = null;
 								Element fragment = null;
 								try {
-									final WebElement elementThatShowsHistoric = driver.findElement(By.cssSelector(oddSelector));
-									new Actions(driver).moveToElement(elementThatShowsHistoric).perform();
+									driver.executeScript(
+											String.format("document.querySelector(\"%s\")", oddSelector) +
+											".dispatchEvent(new Event('mouseover'))"
+									);
 									fragment = Jsoup.parse(driver.findElementById("tooltipdiv").getAttribute("outerHTML"));
 									oddsForKey = parseOddHistory(fragment);
-								} catch (NoSuchElementException e) {
+								} catch (NoSuchElementException | JavascriptException e) {
 									logError(status, new ScrapException("Could not get odd history element", webData, doc, e));
 									try {
 										/* At least used the parsed odd with current timestamp */
