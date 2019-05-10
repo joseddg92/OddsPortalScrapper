@@ -9,6 +9,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 
 import scrapper.ParserListener;
+import scrapper.RequestStatus;
 import util.StringDate;
 
 public class MatchData implements Notifiable, Serializable {
@@ -99,7 +100,7 @@ public class MatchData implements Notifiable, Serializable {
 	}
 	
 	@Override
-	public boolean notify(ParserListener listener) {
-		return listener.onElementParsed(this);
+	public boolean notify(RequestStatus status, ParserListener listener) {
+		return listener.onElementParsed(status, this);
 	}
 }

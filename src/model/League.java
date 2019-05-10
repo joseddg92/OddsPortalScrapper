@@ -3,6 +3,7 @@ package model;
 import java.io.Serializable;
 
 import scrapper.ParserListener;
+import scrapper.RequestStatus;
 
 public class League implements Notifiable, Serializable {
 	
@@ -24,7 +25,7 @@ public class League implements Notifiable, Serializable {
 		return "League[" + sport.name + "/" + country.name + "/" + name + "]";
 	}
 	
-	public boolean notify(ParserListener listener) {
-		return listener.onElementParsed(this);
+	public boolean notify(RequestStatus status, ParserListener listener) {
+		return listener.onElementParsed(status, this);
 	}
 }

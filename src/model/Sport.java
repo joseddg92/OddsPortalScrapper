@@ -3,6 +3,7 @@ package model;
 import java.io.Serializable;
 
 import scrapper.ParserListener;
+import scrapper.RequestStatus;
 
 public class Sport implements Notifiable, Serializable {
 
@@ -18,7 +19,7 @@ public class Sport implements Notifiable, Serializable {
 		return "Sport[" + name + "]";
 	}
 
-	public boolean notify(ParserListener listener) {
-		return listener.onElementParsed(this);
+	public boolean notify(RequestStatus status, ParserListener listener) {
+		return listener.onElementParsed(status, this);
 	}
 }

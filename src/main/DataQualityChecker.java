@@ -11,6 +11,7 @@ import model.MatchData.OddKey;
 import model.ScrapException;
 import model.Sport;
 import scrapper.ParserListener;
+import scrapper.RequestStatus;
 import util.StringDate;
 
 public class DataQualityChecker implements ParserListener {
@@ -23,7 +24,7 @@ public class DataQualityChecker implements ParserListener {
 	}
 
 	@Override
-	public boolean onElementParsed(Sport s) {
+	public boolean onElementParsed(RequestStatus status, Sport s) {
 		if (s == null)
 			System.err.println("Null sport!!" + s);
 		
@@ -34,7 +35,7 @@ public class DataQualityChecker implements ParserListener {
 	}
 
 	@Override
-	public boolean onElementParsed(League l) {
+	public boolean onElementParsed(RequestStatus status, League l) {
 		if (l == null || l.country == null || l.sport == null)
 			System.err.println("Null league: " + l);
 		
@@ -45,7 +46,7 @@ public class DataQualityChecker implements ParserListener {
 	}
 
 	@Override
-	public boolean onElementParsed(Match m) {
+	public boolean onElementParsed(RequestStatus status, Match m) {
 		if (m == null || m.league == null)
 			System.err.println("Null match!!" + m);
 
@@ -63,7 +64,7 @@ public class DataQualityChecker implements ParserListener {
 	}
 
 	@Override
-	public boolean onElementParsed(MatchData m) {
+	public boolean onElementParsed(RequestStatus status, MatchData m) {
 		if (m == null || m.match == null)
 			System.err.println("Empty " + m);
 		
@@ -81,7 +82,7 @@ public class DataQualityChecker implements ParserListener {
 				System.err.println("Bad value:" + key + " is empty");
 			
 			for (Entry<StringDate, Double> e2 : value.entrySet()) {
-				if (! (e2.getValue() == 0 || e2.getValue() >= 1))
+				if (!(e2.getValue() == 0 || e2.getValue() >= 1))
 					System.err.println("Bad odd: " + key + " > " + e2.getKey() + " -> " + e2.getValue());
 			}
 		}

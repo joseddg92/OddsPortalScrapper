@@ -3,6 +3,7 @@ package model;
 import java.io.Serializable;
 
 import scrapper.ParserListener;
+import scrapper.RequestStatus;
 
 public class Match implements Notifiable, Serializable {
 
@@ -40,7 +41,7 @@ public class Match implements Notifiable, Serializable {
 		return "Match<" + getKey() + ">[" + league + "," + name + (isLive ? " <LIVE!> " : "") + "]";
 	}
 	
-	public boolean notify(ParserListener listener) {
-		return listener.onElementParsed(this);
+	public boolean notify(RequestStatus status, ParserListener listener) {
+		return listener.onElementParsed(status, this);
 	}
 }
