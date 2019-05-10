@@ -13,10 +13,39 @@ import java.util.TimeZone;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import org.jsoup.helper.StringUtil;
 import org.jsoup.nodes.Element;
 
 public class Utils {
 
+	/*
+	 * Based on Element::cssSelector()
+	 * https://github.com/jhy/jsoup/blob/master/src/main/java/org/jsoup/nodes/Element.java
+	 */
+	public static String selectorFromTo(Element from, Element to) {
+		if (!to.parents().contains(from))
+			throw new IllegalArgumentException("First element is not parent of the second!");
+
+		if (to.id().length() > 0)
+            return "#" + to.id();
+
+        String tagName = to.tagName().replace(':', '|');
+        StringBuilder selector = new StringBuilder(tagName);
+        String classes = StringUtil.join(to.classNames(), ".");
+        if (classes.length() > 0)
+            selector.append('.').append(classes);
+
+        if (to.parent().equals(from)) // don't add Document to selector, as will always have a html node
+            return selector.toString();
+
+        selector.insert(0, " > ");
+        if (to.parent().select(selector.toString()).size() > 1)
+            selector.append(String.format(
+                ":nth-child(%d)", to.elementSiblingIndex() + 1));
+
+        return selectorFromTo(from, to.parent()) + selector.toString();
+	}
+	
 	public static String pretty(Duration duration) {
 		String result = "";
 		final long hours = duration.toHours();
