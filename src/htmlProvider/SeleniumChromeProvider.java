@@ -2,7 +2,6 @@ package htmlProvider;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import org.openqa.selenium.chrome.ChromeDriver;
@@ -54,7 +53,7 @@ public class SeleniumChromeProvider implements AutoCloseable {
 		driver = new ChromeDriver(options);
 		if (!headless)
 			driver.manage().window().maximize();
-		driver.manage().timeouts().pageLoadTimeout(RWDUtils.WEBLOAD_TIMEOUT_SEC, TimeUnit.SECONDS);
+
 		driverUtils = new RWDUtils(driver);
 	}	
 
@@ -66,7 +65,6 @@ public class SeleniumChromeProvider implements AutoCloseable {
 		if (url != null) {
 			driver.get(url);
 		}
-		driverUtils.waitJs();
 		WebData webData = WebData.fromProvider(this);
 		
 		if (!driverUtils.isLoggedIn(webData.getDoc())) {
