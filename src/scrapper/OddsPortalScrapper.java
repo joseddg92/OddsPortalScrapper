@@ -1,5 +1,6 @@
 package scrapper;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -55,16 +56,16 @@ public class OddsPortalScrapper implements AutoCloseable {
 		listeners.clear();
 	}
 
-	private boolean fireEventCheckStop(RequestStatus status, Notifiable obj) {
+	private boolean fireEventCheckStop(RequestStatus status, Notifiable obj, ParserListener... moreListeners) {
 		boolean keepGoing = true;
 	
-		for (ParserListener listener : listeners)
+		for (ParserListener listener : Utils.union(listeners, Arrays.asList(moreListeners)))
 			keepGoing &= obj.notify(status, listener);
 
 		return !keepGoing;
 	}
 	
-	public RequestStatus findSports() {
+	public RequestStatus findSports(ParserListener... moreListeners) {
 		final RequestStatus status = new RequestStatus();
 		final WebData webData = htmlProvider.get(ENTRY_URL);
 		final Document startPage = webData.getDoc();
@@ -77,7 +78,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 				String sportName = m.group(1);
 				Sport sport = new Sport(sportName);
 				
-				if (fireEventCheckStop(status, sport))
+				if (fireEventCheckStop(status, sport, moreListeners))
 					return status;
 			} else {
 				logError(status, new ScrapException("Parsing a sport tab 'onclick' attribute, the regex did not match: " + onClickAttr, webData, tab));
@@ -87,7 +88,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 		return status;
 	}
 
-	public RequestStatus parse(Sport sport) {
+	public RequestStatus parse(Sport sport, ParserListener... moreListeners) {
 		final RequestStatus status = new RequestStatus();
 		/* As a workaround we need to load a different page (e.g. google) first */
 		final WebData webData = htmlProvider.handle((unused) -> {
@@ -143,7 +144,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 				
 				League l = new League(sport, country, leagueName, relativeUrl);
 
-				if (fireEventCheckStop(status, l))
+				if (fireEventCheckStop(status, l, moreListeners))
 					return status;
 			}
 		}
@@ -151,7 +152,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 		return status;
 	}
 	
-	public RequestStatus parse(League league) {
+	public RequestStatus parse(League league, ParserListener... moreListeners) {
 		final RequestStatus status = new RequestStatus();
 		final WebData webData = htmlProvider.get(BASE_URL + league.relUrl);
 		final Document doc = webData.getDoc();
@@ -193,7 +194,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 			final boolean isLive = row.selectFirst("span.live-odds-ico-prev") != null;
 			Match match = new Match(league, matchName, BASE_URL + matchUrl, isLive, webId);
 			
-			if (fireEventCheckStop(status, match))
+			if (fireEventCheckStop(status, match, moreListeners))
 				return status;
 		}
 		
@@ -230,7 +231,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 		return map;
 	}
 
-	public RequestStatus parse(Match m) {
+	public RequestStatus parse(Match m, ParserListener... moreListeners) {
 		final RequestStatus status = new RequestStatus();
 		MatchData data = htmlProvider.handle((driver) -> {
 			RWDUtils utils = new RWDUtils(driver);
@@ -433,7 +434,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 		if (data == null || data.getOdds().isEmpty())
 			logError(status, new ScrapException("Empty matchData D: " + data));
 		else
-			fireEventCheckStop(status, data);
+			fireEventCheckStop(status, data, moreListeners);
 		
 		return status;
 	}
