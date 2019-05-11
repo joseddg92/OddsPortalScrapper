@@ -23,7 +23,7 @@ import model.MatchData.OddKey;
 import util.StringDate;
 import util.Utils;
 
-public class SQLiteManager_v1 implements DDBBManager {
+public class SQLiteManager_v1 extends AbstractSQLiteManager {
 
 	private static String DB_FILE_PATH = "odds_v1.db";
 	private static String SQLITE_JDBC_STRING = "jdbc:sqlite:" + DB_FILE_PATH;
@@ -32,10 +32,14 @@ public class SQLiteManager_v1 implements DDBBManager {
 	private static String NEW_LINE_SEPARATOR = System.lineSeparator() + System.lineSeparator();
 	
 	public SQLiteManager_v1() throws ClassNotFoundException {
-		Class.forName("org.sqlite.JDBC");
+		this(null);
 	}
 	
-	public void store(MatchData data) throws SQLException {
+	public SQLiteManager_v1(SqlErrorListener listener) throws ClassNotFoundException {
+		super(listener);
+	}
+	
+	protected void writeToDDBB(MatchData data) throws SQLException {
 		final Match m = data.match;
 		
 		try (Connection con = DriverManager.getConnection(SQLITE_JDBC_STRING)) {
@@ -87,8 +91,8 @@ public class SQLiteManager_v1 implements DDBBManager {
 	}
 	
 	@Override
-	public void close() throws Exception {
-		/* For the moment, do nothing */
+	public void close() {
+		super.close();
 	}
 	
 	public void open() throws SQLException, IOException {
