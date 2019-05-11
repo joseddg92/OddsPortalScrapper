@@ -32,7 +32,7 @@ public class SeleniumChromeProvider implements AutoCloseable {
 			
 	private ChromeDriver driver;
 	private RWDUtils driverUtils;
-	private boolean headless;
+	private final boolean headless;
 
 	public SeleniumChromeProvider() {
 		this(false);
@@ -61,7 +61,7 @@ public class SeleniumChromeProvider implements AutoCloseable {
 		return get(null);
 	}
 	
-	public WebData get(String url) {
+	public synchronized WebData get(String url) {
 		if (url != null) {
 			driver.get(url);
 		}
@@ -76,12 +76,12 @@ public class SeleniumChromeProvider implements AutoCloseable {
 		return webData;
 	}
 	
-	public <T> T handle(Function<RemoteWebDriver, T> handler) {
+	public synchronized <T> T handle(Function<RemoteWebDriver, T> handler) {
 		return handler.apply(driver);
 	}
 	
 	@Override
-	public void close() throws Exception {
+	public synchronized void close() throws Exception {
 		driver.close();
 		driver.quit();
 	}
