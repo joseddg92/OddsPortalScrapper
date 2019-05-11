@@ -91,7 +91,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 		final RequestStatus status = new RequestStatus();
 		/* As a workaround we need to load a different page (e.g. google) first */
 		final WebData webData = htmlProvider.handle((unused) -> {
-			htmlProvider.get("http://www.google.es");
+			htmlProvider.get("about:blank");
 			return htmlProvider.get(String.format(SPORT_URL_FORMAT, sport.name));
 		});
 
