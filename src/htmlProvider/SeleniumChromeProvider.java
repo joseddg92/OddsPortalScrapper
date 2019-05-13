@@ -41,20 +41,24 @@ public class SeleniumChromeProvider implements AutoCloseable {
 	public boolean isHeadless() {
 		return headless;
 	}
-	
-	public SeleniumChromeProvider(boolean headless) {
-		this.headless = headless;
 
+	private static ChromeDriver createRWD(boolean headless) {
 		ChromeOptions options = new ChromeOptions();
 		if (headless)
 			options.addArguments("--headless");
 		
 		options.addArguments(defaultOptions);
-		driver = new ChromeDriver(options);
+		ChromeDriver driver = new ChromeDriver(options);
 		if (!headless)
 			driver.manage().window().maximize();
-
-		driverUtils = new RWDUtils(driver);
+		
+		return driver;
+	}
+	
+	public SeleniumChromeProvider(boolean headless) {
+		this.headless = headless;
+		this.driver = createRWD(headless);
+		this.driverUtils = new RWDUtils(driver);
 	}	
 
 	public WebData get() {
