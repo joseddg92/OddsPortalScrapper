@@ -73,7 +73,9 @@ public class Utils {
 	}
 	
 	public static <K,V> Stream<Pair<K,V>> zip(List<K> keys, List<V> values) {
-	    return IntStream.range(0, keys.size()).boxed().map(i -> Pair.create(keys.get(i), values.get(i)));
+		if (keys.size() != values.size())
+			throw new IllegalArgumentException("keys size: " + keys.size() + " != values size: " + values.size());
+		return IntStream.range(0, keys.size()).boxed().map(i -> Pair.create(keys.get(i), values.get(i)));
 	}
 	
 	public static String isToString(InputStream is) throws IOException {
