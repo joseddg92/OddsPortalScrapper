@@ -31,7 +31,7 @@ public class StringDate implements Serializable {
 	}
 	
 	public String getText() {
-		return text + (timeStamp == null ? "<X>" : "");
+		return (timeStamp == null ? text + " /!\\" : new Date(timeStamp).toString());
 	}
 
 	public Long getTimeStamp() {
