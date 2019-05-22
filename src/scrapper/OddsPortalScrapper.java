@@ -173,9 +173,11 @@ public class OddsPortalScrapper implements AutoCloseable {
 			 * Otherwise, log an error, just in case it was a parse problem.
 			 */
 			Element infoMessage = doc.selectFirst("div.message-info div.cms");
-			final String NO_MATCHES_AVAILABLE_MSG = "will appear here as soon as bookmaker betting odds become available."; 
-			if (!infoMessage.text().contains(NO_MATCHES_AVAILABLE_MSG))
-				logError(status, new ScrapException(league +  " contained no rows", webData));
+			if (infoMessage != null) {
+				final String NO_MATCHES_AVAILABLE_MSG = "will appear here as soon as bookmaker betting odds become available."; 
+				if (infoMessage.text() == null || !infoMessage.text().contains(NO_MATCHES_AVAILABLE_MSG))
+					logError(status, new ScrapException(league +  " contained no rows", webData));
+			}
 
 			return status;
 		}
@@ -401,6 +403,10 @@ public class OddsPortalScrapper implements AutoCloseable {
 								String oddSelector = String.format("%s > td.odds:nth-child(%d)", rowSelector, oddElement.elementSiblingIndex() + 1);
 								
 								Element overElement = oddElement.selectFirst("[onmouseover]");
+								if (overElement == null) {
+									logError(status, new ScrapException("could not find [onmouseove] element", webData, oddElement));
+									continue;
+								}
 								oddSelector += " > " + Utils.selectorFromTo(oddElement, overElement);
 								
 								Map<StringDate, Double> oddsForKey = null;
