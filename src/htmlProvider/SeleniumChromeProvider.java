@@ -29,14 +29,23 @@ public class SeleniumChromeProvider implements AutoCloseable {
 			"--allow-http-screen-capture",
 			"--blink-settings=imagesEnabled=false"
 	);
-			
-	private ChromeDriver driver;
-	private RWDUtils driverUtils;
+
 	private final boolean headless;
+	private final ThreadLocal<ChromeDriver> driverPerThread =
+	         new ThreadLocal<ChromeDriver>() {
+	             @Override protected ChromeDriver initialValue() {
+	            	 System.out.println("Creating ChromeDriver for " + Thread.currentThread().getName());
+	                 return createRWD(headless);
+	         }
+	     };
 
 	public SeleniumChromeProvider() {
 		this(false);
 	}
+
+	public SeleniumChromeProvider(boolean headless) {
+		this.headless = headless;
+	}	
 
 	public boolean isHeadless() {
 		return headless;
@@ -54,18 +63,14 @@ public class SeleniumChromeProvider implements AutoCloseable {
 		
 		return driver;
 	}
-	
-	public SeleniumChromeProvider(boolean headless) {
-		this.headless = headless;
-		this.driver = createRWD(headless);
-		this.driverUtils = new RWDUtils(driver);
-	}	
 
 	public WebData get() {
 		return get(null);
 	}
 	
-	public synchronized WebData get(String url) {
+	public WebData get(String url) {
+		final RemoteWebDriver driver = driverPerThread.get();
+		final RWDUtils driverUtils = new RWDUtils(driver);
 		if (url != null) {
 			driver.get(url);
 		}
@@ -80,13 +85,12 @@ public class SeleniumChromeProvider implements AutoCloseable {
 		return webData;
 	}
 	
-	public synchronized <T> T handle(Function<RemoteWebDriver, T> handler) {
-		return handler.apply(driver);
+	public <T> T handle(Function<RemoteWebDriver, T> handler) {
+		return handler.apply(driverPerThread.get());
 	}
 	
 	@Override
-	public synchronized void close() throws Exception {
-		driver.close();
-		driver.quit();
+	public synchronized void close() {
+
 	}
 }
