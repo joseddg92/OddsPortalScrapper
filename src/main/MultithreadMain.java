@@ -216,7 +216,8 @@ public class MultithreadMain {
 		) {
 			ddbbManager.open();
 			try (final OddsPortalScrapper scrapper = new OddsPortalScrapper()) {
-
+				scrapper.registerListener(new DataQualityChecker());
+				
 				scheduledExecutor.scheduleAtFixedRate(
 						() -> { updateLastMatchesList(scrapper); },
 						0, 
