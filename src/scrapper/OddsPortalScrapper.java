@@ -73,27 +73,89 @@ public class OddsPortalScrapper implements AutoCloseable {
 		return !keepGoing;
 	}
 	
-	public RequestStatus findSports(ParserListener... moreListeners) {
-		final RequestStatus status = new RequestStatus();
-		final WebData webData = htmlProvider.get(ENTRY_URL);
-		final Document startPage = webData.getDoc();
-		Elements tabs = startPage.select("div#tabdiv_sport_main li.tab");
-		
-		for (Element tab : tabs) {	
-			String onClickAttr = tab.selectFirst("a").attr("onclick");
-			Matcher m = sportsOnClickToURL_regex.matcher(onClickAttr);
-			if (m.find()) {
-				String sportName = m.group(1);
-				Sport sport = new Sport(sportName);
+	public RequestStatus findLeagues(ParserListener...moreListeners) {
+		return htmlProvider.handle((driver) -> {
+			final RequestStatus status = new RequestStatus();
+			WebData webData = htmlProvider.get(ENTRY_URL);
+			final Document startPage = webData.getDoc();
+			List<League> leagues = new ArrayList<>();
+			Elements tabs = startPage.select("div#tabdiv_sport_main li.tab");
+			
+			for (Element tab : tabs) {
+				Element clickableElement = tab.selectFirst("a[onclick]");
+				if (clickableElement == null) {
+					logError(status, new ScrapException("Parsing a sport tab there's no clickable element", webData, tab));
+					continue;
+				}
+
+				String jsCode = Utils.jsFixThis(clickableElement.attr("onclick"), clickableElement);
+				String sportName = clickableElement.wholeText();
+				if (sportName.trim().isEmpty()) {
+					logError(status, new ScrapException("Empty sportName", webData, clickableElement));
+					continue;
+				}
+
+				final Sport sport = new Sport(sportName);
+				driver.executeScript(jsCode);
 				
-				if (fireEventCheckStop(status, sport, moreListeners))
+				webData = htmlProvider.get();
+				final Document doc = webData.getDoc();
+				
+				Elements rows = doc.select("table[style=\"display: table;\"] tbody > tr");
+				if (rows.isEmpty()) {
+					logError(status, new ScrapException("Sport " + sport +  " contained no rows", webData));
 					return status;
-			} else {
-				logError(status, new ScrapException("Parsing a sport tab 'onclick' attribute, the regex did not match: " + onClickAttr, webData, tab));
+				}
+				
+				String countryName = "";
+				for (Element row : rows) {
+					if (row.attr("class").contains("center") && !row.attr("class").contains("dark")) {
+						
+						/* Skip 'popular' category */
+						String xcid = row.attr("xcid");
+						if (xcid != null && xcid.contains("popular"))
+							continue;
+						try {
+							countryName = row.select("a.bfl").text();
+						} catch (NoSuchElementException e) {
+							logError(status, new ScrapException("Center-row did not contain a 'bfl' child to get name", webData, row));
+						}
+					}
+					
+					/* Skip orphan subcategories (which should only be "popular" subcategories) */
+					if (countryName.isEmpty())
+						continue;
+					
+					Elements tdElements = row.select("td");
+					final Country country = new Country(countryName);
+					for (Element tdElement : tdElements) {
+						Element linkElement = tdElement.selectFirst("a");
+						/* Skip empty elements */
+						if (linkElement == null)
+							continue;
+						
+						String leagueName = linkElement.text();
+						String relativeUrl = linkElement.attr("href");
+						
+						if (leagueName.trim().isEmpty())
+							continue;
+						
+						if (relativeUrl.trim().isEmpty()) {
+							logError(status, new ScrapException("League with empty link", webData, tdElement));
+							continue;
+						}
+						
+						League l = new League(sport, country, leagueName, relativeUrl);
+						leagues.add(l);
+
+					}
+				}
 			}
-		}
-		
-		return status;
+			
+			leagues.forEach(l -> fireEventCheckStop(status, l, moreListeners));
+			
+			return status;
+		});
 	}
 
 	public RequestStatus parse(Sport sport, ParserListener... moreListeners) {
@@ -161,6 +223,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 	}
 	
 	public RequestStatus parse(League league, ParserListener... moreListeners) {
+		//System.out.println(Thread.currentThread().getName() + " parse(" + league + ")");
 		final RequestStatus status = new RequestStatus();
 		final WebData webData = htmlProvider.get(BASE_URL + league.relUrl);
 		final Document doc = webData.getDoc();
@@ -242,6 +305,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 	}
 
 	public RequestStatus parse(Match m, ParserListener... moreListeners) {
+		//System.out.println(Thread.currentThread().getName() + " parse(" + m + ")");
 		final RequestStatus status = new RequestStatus();
 		MatchData data = htmlProvider.handle((driver) -> {
 			RWDUtils utils = new RWDUtils(driver);

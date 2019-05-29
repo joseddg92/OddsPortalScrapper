@@ -82,7 +82,7 @@ public class MultithreadMain {
 		final List<Future<?>> tasks = Collections.synchronizedList(new ArrayList<>());
 		
 		tasks.add(RWDExecutor.submitWithPriority(UPDATE_LIST_PRIORITY, () -> {
-			scrapper.findSports(new ParserListener() {
+			scrapper.findLeagues(new ParserListener() {
 				public void onError(ScrapException e) {	}
 				public boolean onElementParsed(RequestStatus status, MatchData m) { return true; }
 				public boolean onElementParsed(RequestStatus status, Match m) {
