@@ -21,12 +21,19 @@ import com.google.common.primitives.Ints;
 
 public class Utils {
 
+	// TODO:
+	// https://stackoverflow.com/questions/10752512/get-pid-of-browser-launched-by-selenium
+	
 	public static <E> List<E> union(final List<? extends E> list1, final List<? extends E> list2) {
         final ArrayList<E> result = new ArrayList<>(list1.size() + list2.size());
         result.addAll(list1);
         result.addAll(list2);
         return result;
     }
+	
+	public static String jsFixThis(String js, Element thisElement) {
+		return js.replaceAll("this", String.format("document.querySelector(\"%s\")", thisElement.cssSelector()));
+	}
 
 	/*
 	 * Based on Element::cssSelector()
