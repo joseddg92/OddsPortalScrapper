@@ -38,9 +38,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 	private static final String BASE_URL = "https://www.oddsportal.com";
 	private static final String ENTRY_URL = BASE_URL + "/events/";
 	private static final String SPORT_URL_FORMAT = "https://www.oddsportal.com/events/#sport/%s/all";
-	
-	private static final Pattern sportsOnClickToURL_regex = Pattern.compile("tab_sport_main.select\\( '(.*)'\\);this.blur\\(\\);return false;");	
-			
+		
 	private SeleniumChromeProvider htmlProvider;
 	private List<ParserListener> listeners = new ArrayList<>();
 	
@@ -223,7 +221,6 @@ public class OddsPortalScrapper implements AutoCloseable {
 	}
 	
 	public RequestStatus parse(League league, ParserListener... moreListeners) {
-		//System.out.println(Thread.currentThread().getName() + " parse(" + league + ")");
 		final RequestStatus status = new RequestStatus();
 		final WebData webData = htmlProvider.get(BASE_URL + league.relUrl);
 		final Document doc = webData.getDoc();
@@ -305,7 +302,6 @@ public class OddsPortalScrapper implements AutoCloseable {
 	}
 
 	public RequestStatus parse(Match m, ParserListener... moreListeners) {
-		//System.out.println(Thread.currentThread().getName() + " parse(" + m + ")");
 		final RequestStatus status = new RequestStatus();
 		MatchData data = htmlProvider.handle((driver) -> {
 			RWDUtils utils = new RWDUtils(driver);
