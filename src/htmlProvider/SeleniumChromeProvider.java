@@ -71,9 +71,9 @@ public class SeleniumChromeProvider implements AutoCloseable {
 	public WebData get(String url) {
 		final RemoteWebDriver driver = driverPerThread.get();
 		final RWDUtils driverUtils = new RWDUtils(driver);
-		if (url != null) {
+		if (url != null)
 			driver.get(url);
-		}
+
 		WebData webData = WebData.fromProvider(this);
 		
 		if (!driverUtils.isLoggedIn(webData.getDoc())) {
