@@ -31,13 +31,7 @@ public class SeleniumChromeProvider implements AutoCloseable {
 	);
 
 	private final boolean headless;
-	private final ThreadLocal<ChromeDriver> driverPerThread =
-	         new ThreadLocal<ChromeDriver>() {
-	             @Override protected ChromeDriver initialValue() {
-	            	 System.out.println("Creating ChromeDriver for " + Thread.currentThread().getName());
-	                 return createRWD(headless);
-	         }
-	     };
+	private final ThreadLocal<ChromeDriver> driverPerThread;
 
 	public SeleniumChromeProvider() {
 		this(false);
@@ -45,6 +39,7 @@ public class SeleniumChromeProvider implements AutoCloseable {
 
 	public SeleniumChromeProvider(boolean headless) {
 		this.headless = headless;
+		driverPerThread = ThreadLocal.withInitial(()-> createRWD(headless));
 	}	
 
 	public boolean isHeadless() {
