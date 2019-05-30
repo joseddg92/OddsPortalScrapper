@@ -2,6 +2,8 @@ package htmlProvider;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Function;
 
 import org.openqa.selenium.chrome.ChromeDriver;
@@ -32,6 +34,7 @@ public class SeleniumChromeProvider implements AutoCloseable {
 
 	private final boolean headless;
 	private final ThreadLocal<ChromeDriver> driverPerThread;
+	private final Queue<ChromeDriver> driverInstances;
 
 	public SeleniumChromeProvider() {
 		this(false);
@@ -39,7 +42,14 @@ public class SeleniumChromeProvider implements AutoCloseable {
 
 	public SeleniumChromeProvider(boolean headless) {
 		this.headless = headless;
-		driverPerThread = ThreadLocal.withInitial(()-> createRWD(headless));
+		driverInstances = new ConcurrentLinkedQueue<>();
+		driverPerThread = ThreadLocal.withInitial(
+				() -> {
+					ChromeDriver driver = createRWD(headless);
+					driverInstances.add(driver);
+					return driver;
+				} 
+		);
 	}	
 
 	public boolean isHeadless() {
@@ -85,7 +95,8 @@ public class SeleniumChromeProvider implements AutoCloseable {
 	}
 	
 	@Override
-	public synchronized void close() {
-
+	public void close() {
+		// TODO: Ensure (or wait until) no usages of driver are in progress.
+		driverInstances.forEach(driver -> driver.quit());
 	}
 }
