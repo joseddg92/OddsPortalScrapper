@@ -181,9 +181,11 @@ public class MultithreadMain {
 			).collect(Collectors.toList());
 		
 		/* Block until all matches got parsed */
+		int parsedMatches = 0;
 		for (Future<?> task : tasks) {
 			try {
 				task.get();
+				parsedMatches++;
 			} catch (InterruptedException e) {
 				System.out.println(desc + " task interrupted!");
 				break;
@@ -194,8 +196,8 @@ public class MultithreadMain {
 		
 		Duration duration = Duration.between(timeStart, Instant.now());
 		System.out.format("%s done (%d matches in %s, %s sec/match)\n", 
-						  desc, filteredMatches.size(), Utils.pretty(duration), 
-						  Utils.pretty(duration.dividedBy(filteredMatches.size())));
+						  desc, parsedMatches, Utils.pretty(duration), 
+						  Utils.pretty(duration.dividedBy(parsedMatches)));
 	}
 	
 	private static void handleConsole(DDBBManager ddbb, OddsPortalScrapper scrapper) throws IOException {
