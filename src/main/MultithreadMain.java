@@ -38,7 +38,7 @@ import util.Utils;
 
 public class MultithreadMain {
 	final static int CORES = Runtime.getRuntime().availableProcessors();
-	final static int THREADS_PER_CORE = 2;
+	final static int THREADS_PER_CORE = 1;
 	final static int N_THREADS = Math.max(2, CORES * THREADS_PER_CORE);
 
 	final static int LIVE_PARSE_INTERVAL_MINS = 30;
