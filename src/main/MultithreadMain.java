@@ -216,7 +216,7 @@ public class MultithreadMain {
 
 	public static void main(String[] args) throws Exception {
 		Thread.currentThread().setName("MainThread");
-		System.setProperty("webdriver.chrome.driver", "C:\\chromedriver.exe");
+		System.setProperty("webdriver.chrome.driver", "libexecs/chromedriver-74.0.3729.6.exe");
 
 		try (final DDBBManager ddbbManager = new SQLiteManager_v2(
 			new SqlErrorListener() {
