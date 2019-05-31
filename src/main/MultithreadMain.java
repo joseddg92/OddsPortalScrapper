@@ -136,6 +136,8 @@ public class MultithreadMain {
 
 		if (interrupted) {
 			System.out.println("Update matches task interrupted!");
+		} else if (updatedMatches.isEmpty()) {
+			System.err.println("0 matches found, probably failed");
 		} else {
 			lastMatches = Collections.unmodifiableList(updatedMatches);
 
