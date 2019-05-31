@@ -220,6 +220,7 @@ public class MultithreadMain {
 		Thread.currentThread().setName("MainThread");
 		System.setProperty("webdriver.chrome.driver", "libexecs/chromedriver-74.0.3729.6.exe");
 
+		Instant start = Instant.now();
 		try (final DDBBManager ddbbManager = new SQLiteManager_v2(
 			new SqlErrorListener() {
 				@Override
@@ -253,6 +254,7 @@ public class MultithreadMain {
 						TimeUnit.MINUTES
 				);
 
+				System.out.println("Scrapper running (it took " + Utils.pretty(Duration.between(start, Instant.now())) + " to start)");
 				handleConsole(ddbbManager, scrapper);
 
 				System.out.println("Shutting down...");
@@ -261,8 +263,12 @@ public class MultithreadMain {
 				RWDExecutor.shutdownNow();
 				scheduledExecutor.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
 				RWDExecutor.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
-				System.out.println("Done in " + Utils.pretty(Duration.between(shutDownStartTime, Instant.now())));
+				start = Instant.now();
+				System.out.println("Thread finished in " + Utils.pretty(Duration.between(shutDownStartTime, start)));
 			}
+			System.out.println("Scrapper closed in " + Utils.pretty(Duration.between(start, Instant.now())));
+			start = Instant.now();
 		}
+		System.out.println("DDBB Manager closed in " + Utils.pretty(Duration.between(start, Instant.now())));
 	}
 }
