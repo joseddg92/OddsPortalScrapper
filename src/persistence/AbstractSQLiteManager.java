@@ -14,24 +14,24 @@ public abstract class AbstractSQLiteManager implements DDBBManager {
 	private static final int QUEUE_SIZE = 1024;
 	/* Warn if less than this amount of slots are available in the queue */
 	private static final int WARNING_THREHOLD = 16;
-	
+
 	/* Special value to signal WorkingThread to finish */
 	private static final MatchData NULL_SPECIAL_EXIT_VALUE = null;
-	
+
 	private class WorkingThread extends Thread {
-		
+
 		private volatile boolean running = false;
-		
+
 		public WorkingThread() {
 			super("SQLWorkingThread");
 		}
-		
+
 		public void stopAndWait() {
 			if (!running)
 				return;
 
 			running = false;
-			
+
 			try {
 				dataToBeStored.put(NULL_SPECIAL_EXIT_VALUE);
 				/* Block callers until we are done, unless called from the thread itself for some reason */
@@ -39,7 +39,8 @@ public abstract class AbstractSQLiteManager implements DDBBManager {
 						this.join();
 			} catch (InterruptedException e) { }
 		}
-		
+
+		@Override
 		public void run() {
 			running = true;
 
@@ -61,40 +62,42 @@ public abstract class AbstractSQLiteManager implements DDBBManager {
 			running = false;
 		}
 	}
-	
+
 	private BlockingQueue<MatchData> dataToBeStored = new ArrayBlockingQueue<>(QUEUE_SIZE);
 	private SqlErrorListener listener = null;
 	private WorkingThread workingThread = new WorkingThread();
-	
+
 	public AbstractSQLiteManager(SqlErrorListener listener) throws ClassNotFoundException {
 		this();
 		setErrorListener(listener);
 	}
-	
+
 	public AbstractSQLiteManager() throws ClassNotFoundException {
 		Class.forName("org.sqlite.JDBC");
 	}
-	
+
 	public synchronized void setErrorListener(SqlErrorListener listener) {
 		this.listener = listener;
 	}
-	
+
+	@Override
 	public void store(MatchData data) {
 		Objects.requireNonNull(data);
 
-		if (dataToBeStored.remainingCapacity() < WARNING_THREHOLD) 
+		if (dataToBeStored.remainingCapacity() < WARNING_THREHOLD)
 			System.err.println("SQLManager can't keep up! Working thread will soon block");
-		
+
 		try {
 			dataToBeStored.put(data);
 		} catch (InterruptedException e) { }
 	}
-	
+
 	@Override
 	public synchronized void close() {
 		workingThread.stopAndWait();
 	}
-	
+
+	@Override
 	public abstract void open() throws SQLException, IOException;
 	protected abstract void writeToDDBB(MatchData data) throws SQLException;
 

@@ -64,7 +64,7 @@ public class Pair<F, S> implements Map.Entry<F, S> {
     }
     @Override
     public String toString() {
-        return "Pair{" + String.valueOf(first) + " " + String.valueOf(second) + "}";
+		return "Pair{" + String.valueOf(first) + " " + String.valueOf(second) + "}";
     }
     /**
      * Convenience method for creating an appropriately typed pair.

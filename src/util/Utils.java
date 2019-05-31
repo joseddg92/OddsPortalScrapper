@@ -19,16 +19,13 @@ import org.jsoup.nodes.Element;
 
 public class Utils {
 
-	// TODO:
-	// https://stackoverflow.com/questions/10752512/get-pid-of-browser-launched-by-selenium
-	
 	public static <E> List<E> union(final List<? extends E> list1, final List<? extends E> list2) {
         final ArrayList<E> result = new ArrayList<>(list1.size() + list2.size());
         result.addAll(list1);
         result.addAll(list2);
         return result;
     }
-	
+
 	public static String jsFixThis(String js, Element thisElement) {
 		return js.replaceAll("this", String.format("document.querySelector(\"%s\")", thisElement.cssSelector()));
 	}
@@ -60,7 +57,7 @@ public class Utils {
 
         return selectorFromTo(from, to.parent()) + selector.toString();
 	}
-	
+
 	public static String pretty(Duration duration) {
 		String result = "";
 		final long hours = duration.toHours();
@@ -78,20 +75,20 @@ public class Utils {
 
 		return result;
 	}
-	
+
 	public static <K,V> Stream<Pair<K,V>> zip(List<K> keys, List<V> values) {
 		if (keys.size() != values.size())
 			throw new IllegalArgumentException("keys size: " + keys.size() + " != values size: " + values.size());
 		return IntStream.range(0, keys.size()).boxed().map(i -> Pair.create(keys.get(i), values.get(i)));
 	}
-	
+
 	public static String isToString(InputStream is) throws IOException {
 		return isToString(is, StandardCharsets.UTF_8.name());
 	}
-	
+
 	public static String isToString(InputStream is, String charSet) throws IOException {
 		final int BUFF_SIZE = 1024;
-		
+
 		ByteArrayOutputStream result = new ByteArrayOutputStream();
 		byte[] buffer = new byte[BUFF_SIZE];
 		int length;
@@ -101,12 +98,12 @@ public class Utils {
 
 		return result.toString(charSet);
 	}
-	
+
 	public static LocalDateTime secTimestampToDate(long timestamp) {
 		return LocalDateTime.ofInstant(Instant.ofEpochSecond(timestamp),
 		                                TimeZone.getDefault().toZoneId());
 	}
-	
+
 	public static Double tryParseDouble(String s) {
 		try {
 			return Double.parseDouble(s);
@@ -114,18 +111,18 @@ public class Utils {
 			return null;
 		}
 	}
-	
+
 	public static double parseDoubleEmptyIsZero(String s) throws NumberFormatException {
 		if (s.trim().isEmpty())
 			return 0d;
 		return Double.parseDouble(s);
 	}
-	
+
 	public static String combineAllText(Collection<Element> elements) {
 		String s = "";
-		for (Element e : elements) 
+		for (Element e : elements)
 			s += e.text();
-		
+
 		return s;
 	}
 

@@ -39,6 +39,7 @@ public class SQLiteManager_v1 extends AbstractSQLiteManager {
 		super(listener);
 	}
 	
+	@Override
 	protected void writeToDDBB(MatchData data) throws SQLException {
 		final Match m = data.match;
 		
@@ -95,6 +96,7 @@ public class SQLiteManager_v1 extends AbstractSQLiteManager {
 		super.close();
 	}
 	
+	@Override
 	public void open() throws SQLException, IOException {
 		try (InputStream is = getClass().getResourceAsStream(CREATE_DDBB_V1_SCRIPT_RES_PATH)) {
 			String createDDBBScript = Utils.isToString(is);

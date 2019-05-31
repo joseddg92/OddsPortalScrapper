@@ -34,26 +34,26 @@ import util.StringDate;
 import util.Utils;
 
 public class OddsPortalScrapper implements AutoCloseable {
-	
+
 	private static final String BASE_URL = "https://www.oddsportal.com";
 	private static final String ENTRY_URL = BASE_URL + "/events/";
 	private static final String SPORT_URL_FORMAT = "https://www.oddsportal.com/events/#sport/%s/all";
-		
+
 	private SeleniumChromeProvider htmlProvider;
 	private List<ParserListener> listeners = new ArrayList<>();
-	
+
 	public OddsPortalScrapper() {
 		this(true);
 	}
-	
+
 	public OddsPortalScrapper(boolean headless) {
 		htmlProvider = new SeleniumChromeProvider(headless);
 	}
-	
+
 	public void registerListener(ParserListener l) {
 		listeners.add(l);
 	}
-	
+
 	public void unregisterListener(ParserListener l) {
 		listeners.remove(l);
 	}
@@ -64,13 +64,13 @@ public class OddsPortalScrapper implements AutoCloseable {
 
 	private boolean fireEventCheckStop(RequestStatus status, Notifiable obj, ParserListener... moreListeners) {
 		boolean keepGoing = true;
-	
+
 		for (ParserListener listener : Utils.union(listeners, Arrays.asList(moreListeners)))
 			keepGoing &= obj.notify(status, listener);
 
 		return !keepGoing;
 	}
-	
+
 	public RequestStatus findLeagues(ParserListener...moreListeners) {
 		return htmlProvider.handle((driver) -> {
 			final RequestStatus status = new RequestStatus();
@@ -78,7 +78,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 			final Document startPage = webData.getDoc();
 			List<League> leagues = new ArrayList<>();
 			Elements tabs = startPage.select("div#tabdiv_sport_main li.tab");
-			
+
 			for (Element tab : tabs) {
 				Element clickableElement = tab.selectFirst("a[onclick]");
 				if (clickableElement == null) {
@@ -95,20 +95,20 @@ public class OddsPortalScrapper implements AutoCloseable {
 
 				final Sport sport = new Sport(sportName);
 				driver.executeScript(jsCode);
-				
+
 				webData = htmlProvider.get();
 				final Document doc = webData.getDoc();
-				
+
 				Elements rows = doc.select("table[style=\"display: table;\"] tbody > tr");
 				if (rows.isEmpty()) {
 					logError(status, new ScrapException("Sport " + sport +  " contained no rows", webData));
 					return status;
 				}
-				
+
 				String countryName = "";
 				for (Element row : rows) {
 					if (row.attr("class").contains("center") && !row.attr("class").contains("dark")) {
-						
+
 						/* Skip 'popular' category */
 						String xcid = row.attr("xcid");
 						if (xcid != null && xcid.contains("popular"))
@@ -119,11 +119,11 @@ public class OddsPortalScrapper implements AutoCloseable {
 							logError(status, new ScrapException("Center-row did not contain a 'bfl' child to get name", webData, row));
 						}
 					}
-					
+
 					/* Skip orphan subcategories (which should only be "popular" subcategories) */
 					if (countryName.isEmpty())
 						continue;
-					
+
 					Elements tdElements = row.select("td");
 					final Country country = new Country(countryName);
 					for (Element tdElement : tdElements) {
@@ -131,27 +131,27 @@ public class OddsPortalScrapper implements AutoCloseable {
 						/* Skip empty elements */
 						if (linkElement == null)
 							continue;
-						
+
 						String leagueName = linkElement.text();
 						String relativeUrl = linkElement.attr("href");
-						
+
 						if (leagueName.trim().isEmpty())
 							continue;
-						
+
 						if (relativeUrl.trim().isEmpty()) {
 							logError(status, new ScrapException("League with empty link", webData, tdElement));
 							continue;
 						}
-						
+
 						League l = new League(sport, country, leagueName, relativeUrl);
 						leagues.add(l);
 
 					}
 				}
 			}
-			
+
 			leagues.forEach(l -> fireEventCheckStop(status, l, moreListeners));
-			
+
 			return status;
 		});
 	}
@@ -165,17 +165,17 @@ public class OddsPortalScrapper implements AutoCloseable {
 		});
 
 		final Document doc = webData.getDoc();
-		
+
 		Elements rows = doc.select("table[style=\"display: table;\"] tbody > tr");
 		if (rows.isEmpty()) {
 			logError(status, new ScrapException("Sport " + sport +  " contained no rows", webData));
 			return status;
 		}
-		
+
 		String countryName = "";
 		for (Element row : rows) {
 			if (row.attr("class").contains("center") && !row.attr("class").contains("dark")) {
-				
+
 				/* Skip 'popular' category */
 				String xcid = row.attr("xcid");
 				if (xcid != null && xcid.contains("popular"))
@@ -186,11 +186,11 @@ public class OddsPortalScrapper implements AutoCloseable {
 					logError(status, new ScrapException("Center-row did not contain a 'bfl' child to get name", webData, row));
 				}
 			}
-			
+
 			/* Skip orphan subcategories (which should only be "popular" subcategories) */
 			if (countryName.isEmpty())
 				continue;
-			
+
 			Elements tdElements = row.select("td");
 			final Country country = new Country(countryName);
 			for (Element tdElement : tdElements) {
@@ -198,35 +198,35 @@ public class OddsPortalScrapper implements AutoCloseable {
 				/* Skip empty elements */
 				if (linkElement == null)
 					continue;
-				
+
 				String leagueName = linkElement.text();
 				String relativeUrl = linkElement.attr("href");
-				
+
 				if (leagueName.trim().isEmpty())
 					continue;
-				
+
 				if (relativeUrl.trim().isEmpty()) {
 					logError(status, new ScrapException("League with empty link", webData, tdElement));
 					continue;
 				}
-				
+
 				League l = new League(sport, country, leagueName, relativeUrl);
 
 				if (fireEventCheckStop(status, l, moreListeners))
 					return status;
 			}
 		}
-		
+
 		return status;
 	}
-	
+
 	public RequestStatus parse(League league, ParserListener... moreListeners) {
 		final RequestStatus status = new RequestStatus();
 		final WebData webData = htmlProvider.get(BASE_URL + league.relUrl);
 		final Document doc = webData.getDoc();
 		Elements rows = doc.select("table[style] tbody > tr:not(.center):not(.table-dummyrow)");
 		if (rows.isEmpty()) {
-			/* 
+			/*
 			 * If there's an info box informing about no odds, then we know for
 			 * sure that there were no parse errors, it is just that there are
 			 * no available matches but the League is there for some reason...
@@ -234,14 +234,14 @@ public class OddsPortalScrapper implements AutoCloseable {
 			 */
 			Element infoMessage = doc.selectFirst("div.message-info div.cms");
 			if (infoMessage != null) {
-				final String NO_MATCHES_AVAILABLE_MSG = "will appear here as soon as bookmaker betting odds become available."; 
+				final String NO_MATCHES_AVAILABLE_MSG = "will appear here as soon as bookmaker betting odds become available.";
 				if (infoMessage.text() == null || !infoMessage.text().contains(NO_MATCHES_AVAILABLE_MSG))
 					logError(status, new ScrapException(league +  " contained no rows", webData));
 			}
 
 			return status;
 		}
-		
+
 		for (Element row : rows) {
 			Element matchElement = null;
 			Elements possibleMatchElement = row.select("td.name > a");
@@ -257,17 +257,17 @@ public class OddsPortalScrapper implements AutoCloseable {
 				logError(status, new ScrapException("Could not locate match name, skipping", webData, row));
 				continue;
 			}
-			
+
 			final String matchName = matchElement.text();
 			final String matchUrl = matchElement.attr("href");
 			final String webId = row.attr("xeid");
 			final boolean isLive = row.selectFirst("span.live-odds-ico-prev") != null;
 			Match match = new Match(league, matchName, BASE_URL + matchUrl, isLive, webId);
-			
+
 			if (fireEventCheckStop(status, match, moreListeners))
 				return status;
 		}
-		
+
 		return status;
 	}
 
@@ -284,20 +284,20 @@ public class OddsPortalScrapper implements AutoCloseable {
 				text = ((TextNode) node).text().trim();
 			else if (node instanceof Element)
 				text = ((Element) node).text().trim();
-			else 
+			else
 				continue;
 			if (text.isEmpty())
 				continue;
 			if (Utils.tryParseDouble(text) != null && (text.startsWith("+") || text.startsWith("-")))
 				continue;
-			
+
 			Double odd = Utils.tryParseDouble(text);
 			if (odd != null && previous != null)
 				map.put(new StringDate(previous), odd);
-			
+
 			previous = text;
 		}
-		
+
 		return map;
 	}
 
@@ -327,7 +327,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 				return null;
 			}
 			final MatchData matchData = new MatchData(m, dateTimestamp);
-			
+
 			Elements tabs = webData.getDoc().select("div#bettype-tabs li a");
 			/* The tab that is selected by default is the current element and does not have
 			 * a <a> element, so manually append it. */
@@ -336,7 +336,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 				if (tabs.size() != 0)
 					logError(status, new ScrapException("tabs != 0 but no active tab", webData));
 			}
-			
+
 			String tabTitle = activeTab.text();
 			tabs.add(0, activeTab);
 			boolean firstTab = true;
@@ -357,7 +357,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 				} else {
 					firstTab = false;
 				}
-				
+
 				Elements subtabs = webData.getDoc().select("div#bettype-tabs-scope ul[style=\"display: block;\"] li a");
 				Element activeSubtab = webData.getDoc().selectFirst("div#bettype-tabs-scope ul[style=\"display: block;\"] li.active strong span");
 				if (activeSubtab == null)
@@ -375,8 +375,8 @@ public class OddsPortalScrapper implements AutoCloseable {
 					} else {
 						firstSubTab = false;
 					}
-					
-					/* 
+
+					/*
 					 * Expand all bet groups by 'clicking' on them. Sometimes the rows are
 					 * already expanded, so expand only if they don' contain data to be
 					 * parsed (table.table-main)
@@ -399,26 +399,26 @@ public class OddsPortalScrapper implements AutoCloseable {
 
 					final Elements oddTables = doc.select("div#odds-data-table div.table-container:not(.exchangeContainer)");
 					if (oddTables.isEmpty()) {
-						final String errorMsg = String.format("Could not locate any oddTable tbe: %d, e: %d. %s, %s", 
+						final String errorMsg = String.format("Could not locate any oddTable tbe: %d, e: %d. %s, %s",
 														 rowsToBeExpanded, rowsExpanded, section, m);
 						logError(status, new ScrapException(errorMsg, webData, doc));
 						return null;
 					}
-					
+
 					for (Element oddTable : oddTables) {
 						String oddTableTitle = null;
 						if (oddTables.size() > 1) {
 							oddTableTitle = oddTable.selectFirst("strong").text();
 						}
-						
+
 						Element headerRow = oddTable.selectFirst("thead > tr");
 						if (headerRow == null) {
 							logError(status, new ScrapException("No header row while parsing " + section + "in " + m, webData, doc));
 							continue;
 						}
-						
+
 						List<String> columns = headerRow.select("tr a").stream().map(e -> e.text()).collect(Collectors.toList());
-						
+
 						/* Check first and last columns are as expected, and remove them */
 						String firstColumn = columns.get(0);
 						String lastColumn = columns.get(columns.size() - 1);
@@ -433,19 +433,22 @@ public class OddsPortalScrapper implements AutoCloseable {
 
 						if (columns.isEmpty())
 							logError(status, new ScrapException("There are no columns!", webData, oddTable));
-						
+
 						Elements rows = oddTable.select("table > tbody > tr");
 						if (rows.isEmpty())
 							logError(status, new ScrapException("There are no rows!", webData, oddTable));
 
-						
+
 						for (Element row : rows) {
+							if (Thread.currentThread().isInterrupted())
+								return null;
+
 							String rowSelector = row.cssSelector();
 							Elements oddElements = row.select("td.odds");
-							
+
 							if (oddElements.isEmpty())
 								continue;
-							
+
 							if (oddElements.size() != columns.size()) {
 								logError(status, new ScrapException("Strange number of odds, expected: " + columns + " only got: " + oddElements.size(), webData, row));
 								continue;
@@ -458,17 +461,17 @@ public class OddsPortalScrapper implements AutoCloseable {
 							for (int i = 0; i < oddElements.size(); i++) {
 								final String column = columns.get(i);
 								final OddKey key = new OddKey(section, oddTableTitle, betHouse, column);
-								
+
 								Element oddElement = oddElements.get(i);
 								String oddSelector = String.format("%s > td.odds:nth-child(%d)", rowSelector, oddElement.elementSiblingIndex() + 1);
-								
+
 								Element overElement = oddElement.selectFirst("[onmouseover]");
 								if (overElement == null) {
 									logError(status, new ScrapException("could not find [onmouseove] element", webData, oddElement));
 									continue;
 								}
 								oddSelector += " > " + Utils.selectorFromTo(oddElement, overElement);
-								
+
 								Map<StringDate, Double> oddsForKey = null;
 								Element fragment = null;
 								try {
@@ -494,7 +497,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 									logError(status, new ScrapException("Empty oddKey: " + key + ", tbe: " + rowsToBeExpanded + ", e: " + rowsExpanded, webData, fragment));
 								else if (oddsForKey.isEmpty() && emptyOddCell)
 									; /* Empty cell, just skip it */
-								else 
+								else
 									matchData.addOdds(key, oddsForKey);
 							}
 						}
@@ -504,20 +507,23 @@ public class OddsPortalScrapper implements AutoCloseable {
 
 			return matchData;
 		});
-		
+
+		if (Thread.currentThread().isInterrupted())
+			return status;
+
 		if (data == null || data.getOdds().isEmpty())
 			logError(status, new ScrapException("Empty matchData D: " + data));
 		else
 			fireEventCheckStop(status, data, moreListeners);
-		
+
 		return status;
 	}
-	
+
 	@Override
 	public void close() throws Exception {
 		htmlProvider.close();
 	}
-	
+
 	private void logError(RequestStatus status, ScrapException e) {
 		status.addError(e);
 		for (ParserListener listener : listeners)

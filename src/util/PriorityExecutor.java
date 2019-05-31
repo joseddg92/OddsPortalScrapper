@@ -30,6 +30,7 @@ public class PriorityExecutor extends ThreadPoolExecutor {
 			new PriorityBlockingQueue<Runnable>(
 					2 * nThreads,
 					new Comparator<Runnable>() {
+						@Override
 						public int compare(Runnable o1, Runnable o2) {
 							if (o1 instanceof Prioritized && o2 instanceof Prioritized)
 								return ((Prioritized) o1).compareTo(((Prioritized) o2));
@@ -47,6 +48,7 @@ public class PriorityExecutor extends ThreadPoolExecutor {
 	
 	public Future<?> submitWithPriority(Priority p, Runnable runnable) {
 		return submit(new PrioritizedCallable<Object>(new Callable<Object>() {
+			@Override
 			public Object call() throws Exception {
 				runnable.run();
 				return null;
@@ -54,6 +56,7 @@ public class PriorityExecutor extends ThreadPoolExecutor {
 		}, p));
 	}
 	
+	@Override
 	protected <T> RunnableFuture<T> newTaskFor(Callable<T> callable) {
         RunnableFuture<T> newTaskFor = super.newTaskFor(callable);
 
@@ -75,31 +78,38 @@ class PrioritizedFuture<T> implements RunnableFuture<T>, Prioritized {
         this.priority = Objects.requireNonNull(priority);
     }
 
-    public Priority getPriority() {
+    @Override
+	public Priority getPriority() {
         return priority;
     }
     
-    public boolean cancel(boolean mayInterruptIfRunning) {
+    @Override
+	public boolean cancel(boolean mayInterruptIfRunning) {
         return runnable.cancel(mayInterruptIfRunning);
     }
 
-    public boolean isCancelled() {
+    @Override
+	public boolean isCancelled() {
         return runnable.isCancelled();
     }
 
-    public boolean isDone() {
+    @Override
+	public boolean isDone() {
         return runnable.isDone();
     }
 
-    public T get() throws InterruptedException, ExecutionException {
+    @Override
+	public T get() throws InterruptedException, ExecutionException {
         return runnable.get();
     }
 
-    public T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+    @Override
+	public T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
         return runnable.get();
     }
 
-    public void run() {
+    @Override
+	public void run() {
         runnable.run();
     }
 }

@@ -57,6 +57,7 @@ public class SQLiteManager_v2 extends AbstractSQLiteManager {
         }
 	}
 	
+	@Override
 	protected void writeToDDBB(MatchData data) throws SQLException {
 		final Match m = data.match;
 		

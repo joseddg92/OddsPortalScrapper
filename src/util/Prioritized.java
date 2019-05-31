@@ -11,6 +11,7 @@ public interface Prioritized extends Comparable<Prioritized>{
 	
 	Priority getPriority();
 	
+	@Override
 	default int compareTo(Prioritized other) {
 		return getPriority().compareTo(other.getPriority());
 	}

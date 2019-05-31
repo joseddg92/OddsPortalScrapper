@@ -48,9 +48,9 @@ public class SeleniumChromeProvider implements AutoCloseable {
 					ChromeDriver driver = createRWD(headless);
 					driverInstances.add(driver);
 					return driver;
-				} 
+				}
 		);
-	}	
+	}
 
 	public boolean isHeadless() {
 		return headless;
@@ -60,19 +60,19 @@ public class SeleniumChromeProvider implements AutoCloseable {
 		ChromeOptions options = new ChromeOptions();
 		if (headless)
 			options.addArguments("--headless");
-		
+
 		options.addArguments(defaultOptions);
 		ChromeDriver driver = new ChromeDriver(options);
 		if (!headless)
 			driver.manage().window().maximize();
-		
+
 		return driver;
 	}
 
 	public WebData get() {
 		return get(null);
 	}
-	
+
 	public WebData get(String url) {
 		final RemoteWebDriver driver = driverPerThread.get();
 		final RWDUtils driverUtils = new RWDUtils(driver);
@@ -80,20 +80,20 @@ public class SeleniumChromeProvider implements AutoCloseable {
 			driver.get(url);
 
 		WebData webData = WebData.fromProvider(this);
-		
+
 		if (!driverUtils.isLoggedIn(webData.getDoc())) {
 			System.out.println("Not logged in, login in...");
 			driverUtils.logIn();
 			return get(url);
 		}
-		
+
 		return webData;
 	}
-	
+
 	public <T> T handle(Function<RemoteWebDriver, T> handler) {
 		return handler.apply(driverPerThread.get());
 	}
-	
+
 	@Override
 	public void close() {
 		// TODO: Ensure (or wait until) no usages of driver are in progress.
