@@ -335,6 +335,7 @@ public class OddsPortalScrapper implements AutoCloseable {
 			if (activeTab == null) {
 				if (tabs.size() != 0)
 					logError(status, new ScrapException("tabs != 0 but no active tab", webData));
+				return null;
 			}
 
 			String tabTitle = activeTab.text();
