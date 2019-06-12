@@ -72,13 +72,13 @@ public class MultithreadMain {
 		.setUncaughtExceptionHandler(handler).build()
 	);
 
-	private static volatile List<Match> lastMatches = Collections.emptyList();
+	private static volatile List<Match> lastMatches = null;
 
 	private static void updateLastMatchesList(OddsPortalScrapper scrapper) {
 		System.out.println("Starting Update matches..." + new Date());
 		Instant timeStart = Instant.now();
 
-		final List<Match> updatedMatches = Collections.synchronizedList(new ArrayList<>(lastMatches.size()));
+		final List<Match> updatedMatches = Collections.synchronizedList(new ArrayList<>());
 		final List<Future<?>> tasks = Collections.synchronizedList(new ArrayList<>());
 
 		tasks.add(RWDExecutor.submitWithPriority(UPDATE_LIST_PRIORITY, () -> {
@@ -148,6 +148,14 @@ public class MultithreadMain {
 
 	private static void parseMatches(String desc, Priority priority, Predicate<Match> filter, DDBBManager ddbb, OddsPortalScrapper scrapper) {
 		Instant timeStart = Instant.now();
+
+		while (lastMatches == null) {
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				return;
+			}
+		}
 
 		final List<Match> filteredMatches = lastMatches.stream().filter(filter).collect(Collectors.toList());
 		final Map<Match, Integer> errorsPerMatch = Collections.synchronizedMap(new HashMap<>());
