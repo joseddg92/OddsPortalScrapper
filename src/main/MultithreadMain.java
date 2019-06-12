@@ -216,7 +216,7 @@ public class MultithreadMain {
 		Duration duration = Duration.between(timeStart, Instant.now());
 		System.out.format("%s done (%d matches in %s, %s sec/match)\n",
 						  desc, parsedMatches, Utils.pretty(duration),
-						  Utils.pretty(duration.dividedBy(parsedMatches)));
+				(parsedMatches == 0 ? 0 : Utils.pretty(duration.dividedBy(parsedMatches))));
 	}
 
 	private static void handleConsole(DDBBManager ddbb, OddsPortalScrapper scrapper) throws IOException {
