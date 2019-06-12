@@ -251,14 +251,14 @@ public class MultithreadMain {
 
 				scheduledExecutor.scheduleAtFixedRate(
 						() -> { parseMatches("Live matches", PARSE_LIVE_PRIORITY, m -> m.isLive, ddbbManager, scrapper); },
-						LIVE_PARSE_INTERVAL_MINS / 2,
+						0,
 						LIVE_PARSE_INTERVAL_MINS,
 						TimeUnit.MINUTES
 				);
 
 				scheduledExecutor.scheduleAtFixedRate(
 						() -> { parseMatches("Non-live matches", PARSE_NONLIVE_PRIORITY, m -> !m.isLive, ddbbManager, scrapper); },
-						NONLIVE_PARSE_INTERVAL_MINS / 2,
+						LIVE_PARSE_INTERVAL_MINS,
 						NONLIVE_PARSE_INTERVAL_MINS,
 						TimeUnit.MINUTES
 				);
