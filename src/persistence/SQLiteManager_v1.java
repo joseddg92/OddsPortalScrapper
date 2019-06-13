@@ -28,31 +28,31 @@ public class SQLiteManager_v1 extends AbstractSQLiteManager {
 	private static String DB_FILE_PATH = "odds_v1.db";
 	private static String SQLITE_JDBC_STRING = "jdbc:sqlite:" + DB_FILE_PATH;
 	private static String CREATE_DDBB_V1_SCRIPT_RES_PATH = "/persistence/db_create_v1.sql";
-	
+
 	private static String NEW_LINE_SEPARATOR = System.lineSeparator() + System.lineSeparator();
-	
+
 	public SQLiteManager_v1() throws ClassNotFoundException {
 		this(null);
 	}
-	
+
 	public SQLiteManager_v1(SqlErrorListener listener) throws ClassNotFoundException {
 		super(listener);
 	}
-	
+
 	@Override
 	protected void writeToDDBB(MatchData data) throws SQLException {
 		final Match m = data.match;
-		
+
 		try (Connection con = DriverManager.getConnection(SQLITE_JDBC_STRING)) {
 			try {
 				con.setAutoCommit(false);
-				
-				int sportId = insertIfNeededAndGetId(con, "sport", "sportId", 
-						list("name"), 
+
+				int sportId = insertIfNeededAndGetId(con, "sport", "sportId",
+						list("name"),
 						list(m.league.sport.name)
 				);
-				int countryId = insertIfNeededAndGetId(con, "country", "countryId", 
-						list("name"), 
+				int countryId = insertIfNeededAndGetId(con, "country", "countryId",
+						list("name"),
 						list(m.league.country.name)
 				);
 				int leagueId = insertIfNeededAndGetId(con, "league", "leagueId",
@@ -63,12 +63,12 @@ public class SQLiteManager_v1 extends AbstractSQLiteManager {
 						list("oddSportsKey", "leagueId", "name", "localTeam", "visitorTeam", "beginDatetime"),
 						list(m.getKey(), leagueId, m.name, m.getLocalTeam(), m.getVisitorTeam(), data.beginTimeStamp)
 				);
-				
+
 				Map<OddKey, Map<StringDate, Double>> odds = data.getOdds();
 				for (Entry<OddKey, Map<StringDate, Double>> entry : odds.entrySet()) {
 					final OddKey oddKey = entry.getKey();
-					int oddCatId = insertIfNeededAndGetId(con, "odd_category", "catId", 
-							list("cat1", "cat2", "cat3"), 
+					int oddCatId = insertIfNeededAndGetId(con, "odd_category", "catId",
+							list("cat1", "cat2", "cat3"),
 							list(oddKey.section.tab, oddKey.section.subtab, oddKey.row)
 					);
 					int betHouseId = insertIfNeededAndGetId(con, "bethouse", "bethouseId",
@@ -77,12 +77,12 @@ public class SQLiteManager_v1 extends AbstractSQLiteManager {
 					for (Entry<StringDate, Double> oddData : entry.getValue().entrySet()) {
 						final StringDate time = oddData.getKey();
 						insert(con, "odd",
-								list("matchId", "catId", "bethouseId", "time", "timeStr", "value"), 
+								list("matchId", "catId", "bethouseId", "time", "timeStr", "value"),
 								list(matchId, oddCatId, betHouseId, time.getTimeStamp(), time.getText(), oddData.getValue())
 						);
 					}
 				}
-				
+
 				con.commit();
 			} catch (SQLException e) {
 	    		con.rollback();
@@ -90,12 +90,12 @@ public class SQLiteManager_v1 extends AbstractSQLiteManager {
 		    }
 		}
 	}
-	
+
 	@Override
 	public void close() {
 		super.close();
 	}
-	
+
 	@Override
 	public void open() throws SQLException, IOException {
 		try (InputStream is = getClass().getResourceAsStream(CREATE_DDBB_V1_SCRIPT_RES_PATH)) {
@@ -110,31 +110,31 @@ public class SQLiteManager_v1 extends AbstractSQLiteManager {
 
 		super.open();
 	}
-	
+
 	private static void fillStatement(PreparedStatement s, int i, Object o) throws SQLException {
 		if (o instanceof String)
 			s.setString(i, (String) o);
 		else if (o instanceof Timestamp)
 			s.setTimestamp(i, (Timestamp) o);
 		else if (o instanceof Integer)
-			s.setInt(i, (Integer) o); 
+			s.setInt(i, (Integer) o);
 		else if (o instanceof Long)
 			s.setLong(i,  (Long) o);
 		else if (o instanceof Double)
 			s.setDouble(i, (Double) o);
-		else 
+		else
 			throw new SQLException("Cannot handle " + o.getClass() + " type.");
 	}
-	
+
 	private static int insert(Connection con, String table, List<String> columns, List<?> values) throws SQLException {
 		if (columns.size() != values.size())
 			throw new IllegalArgumentException("Missmatch: " + columns + ", " + values);
 
 		final Collector<CharSequence, ?, String> sqlCollector = Collectors.joining(", ", " ( ", " ) ");
-		String columnsWithoutNullValue = 
+		String columnsWithoutNullValue =
 				Utils.zip(columns, values).filter(e -> e.getValue() != null).map(e -> e.getKey()).collect(sqlCollector);
-		
-		final String sqlStatement = 
+
+		final String sqlStatement =
 				"INSERT into " + table + " " +
 				columnsWithoutNullValue +
 				"values " +
@@ -142,42 +142,42 @@ public class SQLiteManager_v1 extends AbstractSQLiteManager {
 
 		try (PreparedStatement st = con.prepareStatement(sqlStatement)) {
 			int stField = 1;
-			
+
 			for (Object value : values)
 				if (value != null)
 					fillStatement(st, stField++, value);
-			
+
 			st.execute();
 
 			try (Statement indexQuery = con.createStatement();
 				 ResultSet result = indexQuery.executeQuery("SELECT last_insert_rowid();")) {
 				if (!result.next())
 					throw new SQLException("Insert + SELECT last_insert_rowid() did not return an int");
-				
+
 				return result.getInt(1);
 			}
 		}
 	}
-	
+
 	private static int insertIfNeededAndGetId(Connection con, String table, String idColumn, List<String> columns, List<?> values) throws SQLException {
 		if (columns.size() != values.size())
 			throw new IllegalArgumentException("Missmatch: " + columns + ", " + values);
 
 		int id;
-		final String sqlStatement = 
+		final String sqlStatement =
 				"SELECT " + idColumn + " " +
 				"FROM " + table + " " +
 				"WHERE " +
 				Utils.zip(columns, values).map(e -> e.getKey() + (e.getValue() == null ? " IS NULL" : " = ?" ))
 					.collect(Collectors.joining(" AND "));
-		
+
 		try (PreparedStatement st = con.prepareStatement(sqlStatement)) {
 			int stField = 1;
-			
+
 			for (Object value : values)
 				if (value != null)
 					fillStatement(st, stField++, value);
-			
+
 			try (ResultSet result = st.executeQuery()) {
 				if (result.next()) {
 					/* Present in the ddbb already, return id */
@@ -187,14 +187,14 @@ public class SQLiteManager_v1 extends AbstractSQLiteManager {
 				}
 			}
 		}
-		
+
 		return id;
 	}
-	
+
 	private static List<String> list(String ... elements) {
 		return Arrays.asList(elements);
 	}
-	
+
 	private static List<Object> list(Object ... elements) {
 		return Arrays.asList(elements);
 	}
