@@ -15,9 +15,6 @@ public abstract class AbstractSQLiteManager implements DDBBManager {
 	/* Warn if less than this amount of slots are available in the queue */
 	private static final int WARNING_THREHOLD = 16;
 
-	/* Special value to signal WorkingThread to finish */
-	private static final MatchData NULL_SPECIAL_EXIT_VALUE = null;
-
 	private class WorkingThread extends Thread {
 
 		private volatile boolean running = false;
@@ -30,14 +27,14 @@ public abstract class AbstractSQLiteManager implements DDBBManager {
 			if (!running)
 				return;
 
-			running = false;
+			this.interrupt();
 
-			try {
-				dataToBeStored.put(NULL_SPECIAL_EXIT_VALUE);
-				/* Block callers until we are done, unless called from the thread itself for some reason */
-				if (!Thread.currentThread().equals(this))
+			/* Block callers until we are done, unless called from the thread itself for some reason */
+			if (!Thread.currentThread().equals(this)) {
+				try {
 						this.join();
-			} catch (InterruptedException e) { }
+				} catch (InterruptedException e) { }
+			}
 		}
 
 		@Override
@@ -47,8 +44,7 @@ public abstract class AbstractSQLiteManager implements DDBBManager {
 			while (running) {
 				try {
 					MatchData data = dataToBeStored.take();
-					if (data == NULL_SPECIAL_EXIT_VALUE)
-						break;
+
 					try {
 						writeToDDBB(data);
 					} catch (SQLException e) {
@@ -56,7 +52,10 @@ public abstract class AbstractSQLiteManager implements DDBBManager {
 							listener.onSqlError(data,  e);
 						}
 					}
-				} catch (InterruptedException e) {}
+				} catch (InterruptedException e) {
+					System.out.println("SQlWorkingThread interrupted, stopping...");
+					break;
+				}
 			}
 
 			running = false;
