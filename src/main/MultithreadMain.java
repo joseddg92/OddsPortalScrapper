@@ -41,7 +41,7 @@ public class MultithreadMain {
 	final static int THREADS_PER_CORE = 1;
 	final static int N_THREADS = Math.max(2, CORES * THREADS_PER_CORE);
 
-	final static int LIVE_PARSE_INTERVAL_MINS = 30;
+	final static int LIVE_PARSE_INTERVAL_MINS = 10;
 	final static int NONLIVE_PARSE_INTERVAL_MINS = 120;
 
 	final static Priority UPDATE_LIST_PRIORITY = Priority.HIGH;
