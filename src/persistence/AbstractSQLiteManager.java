@@ -98,7 +98,10 @@ public abstract class AbstractSQLiteManager implements DDBBManager {
 	}
 
 	@Override
-	public abstract void open() throws SQLException, IOException;
+	public void open() throws SQLException, IOException {
+		workingThread.start();
+	}
+
 	protected abstract void writeToDDBB(MatchData data) throws SQLException;
 
 }

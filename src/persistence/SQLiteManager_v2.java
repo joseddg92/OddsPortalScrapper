@@ -55,6 +55,8 @@ public class SQLiteManager_v2 extends AbstractSQLiteManager {
 	        		statement.execute(sqlStatement);
 	        }
         }
+
+		super.open();
 	}
 	
 	@Override

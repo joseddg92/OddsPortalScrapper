@@ -107,6 +107,8 @@ public class SQLiteManager_v1 extends AbstractSQLiteManager {
 	        		statement.execute(sqlStatement);
 	        }
         }
+
+		super.open();
 	}
 	
 	private static void fillStatement(PreparedStatement s, int i, Object o) throws SQLException {
