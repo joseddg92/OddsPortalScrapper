@@ -6,6 +6,7 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Function;
 
+import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.remote.RemoteWebDriver;
@@ -32,9 +33,13 @@ public class SeleniumChromeProvider implements AutoCloseable {
 			"--blink-settings=imagesEnabled=false"
 	);
 
+	private static final int MAX_GET_RETRIES = 5;
+	private static final int GET_RETRY_SLEEP_S = 10;
+
 	private final boolean headless;
 	private final ThreadLocal<ChromeDriver> driverPerThread;
 	private final Queue<ChromeDriver> driverInstances;
+
 
 	public SeleniumChromeProvider() {
 		this(false);
@@ -76,18 +81,38 @@ public class SeleniumChromeProvider implements AutoCloseable {
 	public WebData get(String url) {
 		final RemoteWebDriver driver = driverPerThread.get();
 		final RWDUtils driverUtils = new RWDUtils(driver);
-		if (url != null)
-			driver.get(url);
 
-		WebData webData = WebData.fromProvider(this);
+		for (int retry = 0; retry < MAX_GET_RETRIES; retry++) {
+			if (retry > 0) {
+				try {
+					Thread.sleep(GET_RETRY_SLEEP_S);
+				} catch (InterruptedException e) {
+					break;
+				}
+			}
 
-		if (!driverUtils.isLoggedIn(webData.getDoc())) {
-			System.out.println("Not logged in, login in...");
-			driverUtils.logIn();
-			return get(url);
+			if (url != null) {
+				try {
+					driver.get(url);
+				} catch (TimeoutException e) {
+					System.err.println("Timeout exception getting: " + url + ", retrying...");
+					continue;
+				}
+			}
+
+			final WebData webData = WebData.fromProvider(this);
+
+			if (!driverUtils.isLoggedIn(webData.getDoc())) {
+				System.out.println("Not logged in, login in...");
+				driverUtils.logIn();
+				continue;
+			}
+
+			return webData;
 		}
 
-		return webData;
+		System.err.println("Could not get " + url);
+		return null;
 	}
 
 	public <T> T handle(Function<RemoteWebDriver, T> handler) {
