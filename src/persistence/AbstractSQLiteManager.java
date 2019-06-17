@@ -88,7 +88,9 @@ public abstract class AbstractSQLiteManager implements DDBBManager {
 
 		try {
 			dataToBeStored.put(data);
-		} catch (InterruptedException e) { }
+		} catch (InterruptedException e) {
+			System.err.println("Interrupted while storing, data will be lost");
+		}
 	}
 
 	@Override
