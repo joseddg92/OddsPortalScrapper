@@ -78,6 +78,22 @@ public class SeleniumChromeProvider implements AutoCloseable {
 		return get(null);
 	}
 
+	private void resetChromeDriver() {
+		try {
+			driverPerThread.get().close();
+		} catch (Exception e) {
+			System.err.println("Could not close chromedriver on resetting...");
+		}
+
+		try {
+			driverPerThread.get().quit();
+		} catch (Exception e) {
+			System.err.println("Could not quit chromedriver on resetting...");
+		}
+
+		driverPerThread.remove();
+	}
+
 	public WebData get(String url) {
 		final RemoteWebDriver driver = driverPerThread.get();
 		final RWDUtils driverUtils = new RWDUtils(driver);
@@ -95,7 +111,8 @@ public class SeleniumChromeProvider implements AutoCloseable {
 				try {
 					driver.get(url);
 				} catch (TimeoutException e) {
-					System.err.println("Timeout exception getting: " + url + ", retrying...");
+					System.err.println("Timeout exception getting: " + url + ", resetting...");
+					resetChromeDriver();
 					continue;
 				}
 			}
